@@ -1,0 +1,16 @@
+export("riley")
+export("uvmeta")
+
+S3method(print, riley)
+S3method(summary, riley)
+S3method(print, summary.riley)
+S3method(vcov, riley)
+S3method(logLik, riley)
+S3method(plot, riley)
+S3method(riley, default)
+
+S3method(print, uvmeta)
+S3method(predict, uvmeta)
+S3method(summary, uvmeta)
+S3method(uvmeta, default)
+
