@@ -16,20 +16,15 @@
 \value{ Array containing confidence regions for the overall treatment effect and heterogeneity measures.}
 
 \references{
-DerSimonian, R., & Laird, N. (1986). 
-\dQuote{Meta-analysis in clinical trials.} \emph{Controlled Clinical Trials}, \bold{7}, 177--188.
+DerSimonian R, Laird N. Meta-analysis in clinical trials. \emph{Controlled Clinical Trials} 1986; \bold{7}: 177--188.
 
-Biggerstaff, BJ., & Tweedie, RL. (1997). 
-\dQuote{Incorporating variability in estimates of heterogeneity in the random effects model in meta-analysis.} \emph{Statistics in Medicine}, \bold{16},  753--768.
+Biggerstaff BJ, Tweedie RL. Incorporating variability in estimates of heterogeneity in the random effects model in meta-analysis. \emph{Statistics in Medicine} 1997; \bold{16}:  753--768.
 
-Higgins, JPT., & Thompson, SG. (2002). 
-\dQuote{Quantifying heterogeneity in a meta-analysis.} \emph{Statistics in Medicine}, \bold{21}, 1539--1558.
+Higgins JPT, Thompson SG. Quantifying heterogeneity in a meta-analysis. \emph{Statistics in Medicine} 2002; \bold{21}: 1539--1558.
 
-Borenstein, M., Hedges, LV., Higgins, JPT., & Rothstein HR. (2010). 
-\dQuote{A basic introduction to fixed-effect and random-effects models for meta-analysis.} \emph{Research Synthesis Methods}, \bold{1}, 97--111.
+Borenstein M, Hedges LV, Higgins JPT, Rothstein HR. A basic introduction to fixed-effect and random-effects models for meta-analysis. \emph{Research Synthesis Methods} 2010; \bold{1}: 97--111.
 
-Riley, RD., Higgins, JPT., & Deeks, JJ. (2011). 
-\dQuote{Interpretation of random effects meta-analyses.} \emph{British Medical Journal}, \bold{342}, d549.
+Riley RD, Higgins JPT, Deeks JJ. Interpretation of random effects meta-analyses. \emph{British Medical Journal} 2011; \bold{342}: d549.
 }
 
 \author{ Thomas Debray <thomas.debray@gmail.com> }

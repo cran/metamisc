@@ -20,8 +20,7 @@
 \author{ Thomas Debray <thomas.debray@gmail.com> }
 
 \references{
-Riley, RD., Higgins, JPT., & Deeks, JJ. (2011). 
-\dQuote{Interpretation of random effects meta-analyses.} \emph{British Medical Journal}, \bold{342}, d549.
+Riley RD, Higgins JPT, Deeks, JJ. Interpretation of random effects meta-analyses. \emph{British Medical Journal} 2011; \bold{342}: d549.
 }
 
 \seealso{

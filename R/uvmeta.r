@@ -18,6 +18,8 @@ uvmetaMOM <- function(r,vars) {
     # Degrees of freedom
     numstudies = length(r)
     dfr = numstudies-1
+    
+    if(numstudies < 3){warning("There are very few primary studies!")}
 
     ############################################################################
     # FIXED EFFECTS MODEL
@@ -124,19 +126,13 @@ print.uvmeta <- function(x, ...)
 {
     cat("Call:\n")
     print(x$call)
-    cat("\nCoefficients:\n\n")
-    fe = array(NA,dim=c(2,2))
-    fe[1,] = cbind(round(x$fixef$mean,5),round(sqrt(x$fixef$var),5))
-    fe[2,] = cbind(round(x$ranef$mean,5),round(sqrt(x$ranef$var),5))
-    colnames(fe) = c("Estimate","StdErr")
-    rownames(fe) = c("Fixed Effects","Random Effects")
-    print(fe,quote=F)
-    cat("\nHeterogeneity:")
-    cat(paste("\nTau squared: \t\t",round(x$ranef$tauSq,5),sep=""))
-    cat(paste("\nCochran's Q statistic: \t",round(x$Q$Q,5)," (p.value: ",round(x$Q$p.value,5),")",sep=""))
-    cat(paste("\nH-square index: \t", round(x$H2$H2,5),sep=""))
+    cat(paste("\nFixed effects summary:\t",round(x$fixef$mean,5))," (SE: ",round(sqrt(x$fixef$var),5), ")",sep="")
+    cat(paste("\nRandom effects summary:\t",round(x$ranef$mean,5))," (SE: ",round(sqrt(x$ranef$var),5), ")",sep="")
+    cat(paste("\n\nTau squared: \t\t",round(x$ranef$tauSq,5),sep=""))
+    cat(paste("\nCochran's Q statistic: \t",round(x$Q$Q,5)," (p-value: ",round(x$Q$p.value,5),")",sep=""))
     cat(paste("\nI-square index: \t", round(x$I2$I2*100,3)," %\n",sep=""))
 }
+
 
 predict.uvmeta <- function(object, level = 0.95, ...)
 {

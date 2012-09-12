@@ -7,7 +7,9 @@ Plot the summary of the bivariate model from Riley et al. (2008).
 \description{
 This function plots the summary sensitivity and false positive rate with their corresponding confidence regions.
 }
-\usage{\method{plot}{riley}(x, plotsumm = TRUE, plotnumerics = TRUE, level = 0.95, main = "", ylim = c(0, 1), xlim = c(0, 1), pch = 1, lty = 1, lwd = 1, cex.numerics = 0.45, add = F, \ldots)}
+\usage{\method{plot}{riley}(x, plotsumm = TRUE, plotnumerics = TRUE, level = 0.95, main="",
+                       ylim = c(0,1), xlim = c(0,1), pch = 1, lty = 1, lwd = 1, cex.numerics=0.45,
+                       add=FALSE, \ldots)}
 
 \arguments{
   \item{x}{a \code{riley} object.}
@@ -26,8 +28,7 @@ This function plots the summary sensitivity and false positive rate with their c
 }
 
 \references{
-Riley, RD., Thompson, JR., & Abrams, KR. (2008).
-\dQuote{An alternative model for bivariate random-effects meta-analysis when the within-study correlations are unknown.} \emph{Biostatistics}, \bold{9}, 172--186.
+Riley RD, Thompson JR, Abrams KR. An alternative model for bivariate random-effects meta-analysis when the within-study correlations are unknown. \emph{Biostatistics} 2008; \bold{9}: 172--186.
 }
 
 \author{Thomas Debray <thomas.debray@gmail.com>}
@@ -44,9 +45,9 @@ ds2 <- Scheidler[which(Scheidler$modality==2),]
 ds3 <- Scheidler[which(Scheidler$modality==3),]
 
 #Perform the analyses
-fit1 <- riley(ds1)
-fit2 <- riley(ds2)
-fit3 <- riley(ds3)
+fit1 <- riley(ds1, type="test.accuracy")
+fit2 <- riley(ds2, type="test.accuracy")
+fit3 <- riley(ds3, type="test.accuracy")
 
 plot(fit1,plotnumerics=FALSE,pch=0) #CT
 plot(fit2,plotnumerics=FALSE,add=TRUE,pch=1) #LAG

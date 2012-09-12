@@ -4,7 +4,7 @@
 
 \title{Parameter summaries}
 
-\description{Provides the summary estimtes of the alternative model for bivariate random-effects meta-analysis by Riley et al. (2008) with their corresponding confidence intervals. The model parameters are given as mu1 (logit sensitivity), mu2 (logit FPR), psi1, psi2 and rho; the summary sensitivity and false positive rate are added for completeness. Confidence intervals are derived from the inverse Hessian. }
+\description{Provides the summary estimtes of the alternative model for bivariate random-effects meta-analysis by Riley et al. (2008) with their corresponding confidence intervals. The model parameters are given as \code{beta1}, \code{beta2}, \code{psi1}, \code{psi2} and \code{rho}.  Confidence intervals are derived from the inverse Hessian.}
 
 \usage{\method{summary}{riley}(object, level = 0.95, \ldots)}
 
@@ -14,11 +14,13 @@
   \item{\dots}{arguments to be passed on to other functions}
 }
 
-\value{ array with confidence intervals for the estimated model parameters, as well for the resulting mean sensitivity (Sens) and false positive rate (FPR).}
+\details{For diagnostic test accuracy data, \code{beta1} equals the logit sensitivity (Sens) and \code{beta2} equals the logit false positive rate (FPR). The summary sensitivity and FPR are added for completeness.}
+
+
+\value{ array with confidence intervals for the estimated model parameters. For diagnostic test accuracy data, the resulting summary sensitivity and false positive rate are included.}
 
 \references{
-Riley, RD., Thompson, JR., & Abrams, KR. (2008).
-\dQuote{An alternative model for bivariate random-effects meta-analysis when the within-study correlations are unknown.} \emph{Biostatistics}, \bold{9}, 172--186.
+Riley RD, Thompson JR, Abrams KR. An alternative model for bivariate random-effects meta-analysis when the within-study correlations are unknown. \emph{Biostatistics} 2008; \bold{9}: 172--186.
 }
 
 \author{Thomas Debray <thomas.debray@gmail.com>}
