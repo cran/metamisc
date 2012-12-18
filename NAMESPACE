@@ -1,5 +1,6 @@
 export("riley")
 export("uvmeta")
+importFrom("rjags", "jags.model", "coda.samples")
 
 S3method(print, riley)
 S3method(summary, riley)
@@ -14,3 +15,5 @@ S3method(predict, uvmeta)
 S3method(summary, uvmeta)
 S3method(uvmeta, default)
 
+
+ 

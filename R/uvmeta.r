@@ -12,9 +12,9 @@
 # example.var = c(0.03,0.03,0.05,0.01,0.05,0.02)
 # macc(example.r,example.var)
 ################################################################################
-uvmeta <- function(r, vars, method="MOM", ...) UseMethod("uvmeta")
+uvmeta <- function(r, vars, model="random", method="MOM", pars=list(quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975), n.chains=4, n.adapt=5000, n.init=1000, n.iter=10000), ...) UseMethod("uvmeta")
 
-uvmetaMOM <- function(r,vars) {
+uvmetaMOM <- function(r,vars, model="random", pars=list(quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975))) {
     # Degrees of freedom
     numstudies = length(r)
     dfr = numstudies-1
@@ -64,8 +64,8 @@ uvmetaMOM <- function(r,vars) {
         between_study_var = 0
         se_lnH = sqrt((1/(2*(length(r)-2)))*(1-(1/(3*((length(r)-2)**2)))))
     }
-    varQ = 2*dfr + 4*(sum(w)-sum(w**2)/sum(w))*between_study_var + 2*(sum(w**2)-2*((sum(w**3)/sum(w))+(sum(w**2)**2)/sum(w)**2))*between_study_var**2
-    varTauSq = varQ/(sum(w)-sum(w**2)/sum(w))**2
+    #varQ = 2*dfr + 4*(sum(w)-sum(w**2)/sum(w))*between_study_var + 2*(sum(w**2)-2*((sum(w**3)/sum(w))+(sum(w**2)**2)/sum(w)**2))*between_study_var**2
+    #varTauSq = varQ/(sum(w)-sum(w**2)/sum(w))**2
 
     # Within-study plus between-study variance
     re_v = vars + between_study_var
@@ -86,7 +86,7 @@ uvmetaMOM <- function(r,vars) {
     re_z_T = re_weighted_Tbar/re_se_T
     
     fixef.results = list(mean=weighted_Tbar,var=var_T)
-    ranef.results = list(mean=re_weighted_Tbar,var=re_var_T,tauSq=between_study_var,varTauSq=varTauSq)
+    ranef.results = list(mean=re_weighted_Tbar,var=re_var_T,tauSq=between_study_var)
     H2.results    = list(H2=H_sq,se_lnH=se_lnH)
     I2.results    = list(I2=I_sq)
     
@@ -100,22 +100,68 @@ uvmetaMOM <- function(r,vars) {
     # between-study variation
     #Q.critical = qchisq(0.95,df=(length(r)-1))
     Q_p = 1-pchisq(Q,df=(length(r)-1))
-    Q.results = list(Q=Q,var=varQ,p.value=Q_p)
+    Q.results = list(Q=Q,p.value=Q_p)
+
+    results = array(NA,dim=c(4, length(pars$quantiles)+2))
+    colnames(results) = c("Mean","Var",paste(pars$quantiles*100,"%",sep=""))
+    rownames(results) = c("mu","tausq","Q","Isq")
+    results[3,] = c(Q,NA,qchisq(pars$quantiles,df=dfr))
     
+    if (model=="random") {
+        results[1,] = c(re_weighted_Tbar,re_var_T,re_weighted_Tbar+qnorm(pars$quantiles)*sqrt(re_var_T))
+	results[2,] = c(between_study_var,NA,rep(NA,length(pars$quantiles)))
+	results[4,] = c(I_sq,NA,rep(NA,length(pars$quantiles)))
+    } else if (model=="fixed") {
+        results[1,] = c(weighted_Tbar,var_T,weighted_Tbar+qnorm(pars$quantiles)*sqrt(var_T))
+	results[2,] = c(0,0,rep(NA,length(pars$quantiles)))
+    }
+ 
     ############################################################################
     # Output
     ############################################################################
-    out <- list(fixef=fixef.results,ranef=ranef.results,Q=Q.results,H2=H2.results,I2=I2.results,df=dfr,numstudies=numstudies)
+    out <- list(results=results,model=model,df=dfr,numstudies=numstudies)
+    class(out) <- "uvmeta"
     return (out)
 }
 
-uvmeta.default <- function(r,vars, method="MOM", ...)
+uvmetaBayes <- function(r,vars, model="random",pars=list(quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975), n.chains=4, n.adapt=5000, n.init=1000, n.iter=10000)) {
+	numstudies = length(r)	
+	dfr = numstudies-1
+
+	modelfile <-  if (model=="random") system.file(package="metamisc", "model", "uvmeta_ranef.bug") else system.file(package="metamisc", "model", "uvmeta_fixef.bug")
+	jags <- jags.model(modelfile,
+                     data = list('r' = r,
+                                 'vars' = vars,
+                                 'k' = numstudies), #prior precision matrix
+                     n.chains = pars$n.chains,
+                     n.adapt = pars$n.adapt)
+	update(jags, pars$n.init) #initialize
+	samples <- coda.samples(jags, c('mu','tausq','Q','Isq'),n.iter=pars$n.iter)
+
+	results <- summary(samples,quantiles=pars$quantiles)
+
+	results.overview = array(NA,dim=c(dim(results[[1]])[1], length(pars$quantiles)+2))
+	colnames(results.overview) = c("Mean","Var",paste(pars$quantiles*100,"%",sep=""))
+	rownames(results.overview) = rownames(results[[2]])
+	results.overview[,1] = (results[[1]])[,"Mean"]
+	results.overview[,2] = (results[[1]])[,"SD"]**2
+	for (i in 1:length(pars$quantiles)) {
+		results.overview[,(i+2)] = (results[[2]])[,i]
+	}
+	
+	out <- list(results=results.overview,model=model,df=dfr,numstudies=numstudies)
+    	class(out) <- "uvmeta"
+    	return (out)
+}
+
+uvmeta.default <- function(r,vars, model="random", method="MOM", ...)
 {
     x <- as.vector(r)
     y <- as.vector(vars)
     est <- NA    
     if (length(x)!=length(y)) {warning("The vectors 'r' and 'vars' have a different size!")}
-    if (method == "MOM") { est <- uvmetaMOM(x, y) }
+    if (method == "MOM") { est <- uvmetaMOM(x, y, model) }
+    else if (method == "bayes") { est <- uvmetaBayes(x,y, model) }
 
     est$call <- match.call()
     class(est) <- "uvmeta"
@@ -124,13 +170,9 @@ uvmeta.default <- function(r,vars, method="MOM", ...)
 
 print.uvmeta <- function(x, ...)
 {
-    cat("Call:\n")
-    print(x$call)
-    cat(paste("\nFixed effects summary:\t",round(x$fixef$mean,5))," (SE: ",round(sqrt(x$fixef$var),5), ")",sep="")
-    cat(paste("\nRandom effects summary:\t",round(x$ranef$mean,5))," (SE: ",round(sqrt(x$ranef$var),5), ")",sep="")
-    cat(paste("\n\nTau squared: \t\t",round(x$ranef$tauSq,5),sep=""))
-    cat(paste("\nCochran's Q statistic: \t",round(x$Q$Q,5)," (p-value: ",round(x$Q$p.value,5),")",sep=""))
-    cat(paste("\nI-square index: \t", round(x$I2$I2*100,3)," %\n",sep=""))
+	out <- (x$results)
+	print(out)
+	out
 }
 
 
@@ -141,41 +183,26 @@ predict.uvmeta <- function(object, level = 0.95, ...)
   #The correct number of degrees of freedom for this t distribution is complex, and we use a value of k–2 largely for pragmatic reasons. (Riley 2011)
   df = 2 
   
-  pred.mean  <- object$ranef$mean
-  pred.lower <- object$ranef$mean + qt(alpha,df=(object$numstudies-df))*sqrt(object$ranef$tauSq+object$ranef$var)
-  pred.upper <- object$ranef$mean + qt((1-alpha),df=(object$numstudies-df))*sqrt(object$ranef$tauSq+object$ranef$var)
+  pred.mean  <- object$results["mu","Mean"]
+  pred.lower <- object$results["mu","Mean"] + qt(alpha,df=(object$numstudies-df))*sqrt(object$results["tausq","Mean"]+object$results["mu","Var"])
+  pred.upper <- object$results["mu","Mean"] + qt((1-alpha),df=(object$numstudies-df))*sqrt(object$results["tausq","Mean"]+object$results["mu","Var"])
   predint <- c(pred.mean,pred.lower,pred.upper)
   names(predint) <- c("Estimate", paste((alpha*100),"%"),paste(((1-alpha)*100),"%"))
   predint
 }
 
-summary.uvmeta <- function(object, level = 0.95, ...)
+summary.uvmeta <- function(object, ...)
 {
-    alpha = (1-level)/2
-
-    fe.lowerconf =  object$fixef$mean + qnorm(alpha)*sqrt(object$fixef$var)
-    fe.upperconf =  object$fixef$mean + qnorm(1-alpha)*sqrt(object$fixef$var)
-    re.lowerconf =  object$ranef$mean + qnorm(alpha)*sqrt(object$ranef$var)
-    re.upperconf =  object$ranef$mean + qnorm(1-alpha)*sqrt(object$ranef$var)
-    lnH.lowerconf = log(sqrt(object$H2$H2)) + qnorm(alpha)*object$H2$se_lnH
-    lnH.upperconf = log(sqrt(object$H2$H2)) + qnorm(1-alpha)*object$H2$se_lnH
-    H2.lowerconf = (exp(lnH.lowerconf))**2 
-    H2.upperconf = (exp(lnH.upperconf))**2
-    I2.lowerconf = max(c(0,(H2.lowerconf-1)/H2.lowerconf))
-    I2.upperconf = if (H2.upperconf > 0) min(c(1,(H2.upperconf-1)/H2.upperconf)) else 0
-    Q.lowerconf = object$Q$Q  + qnorm(alpha)*sqrt(object$Q$var)
-    Q.upperconf = object$Q$Q  + qnorm(1-alpha)*sqrt(object$Q$var)
-    tauSq.lowerconf = object$ranef$tauSq + qnorm(alpha)*sqrt(object$ranef$varTauSq)
-    tauSq.upperconf = object$ranef$tauSq + qnorm(1-alpha)*sqrt(object$ranef$varTauSq)
-    lower.conf = c(fe.lowerconf,re.lowerconf,tauSq.lowerconf,Q.lowerconf,H2.lowerconf,I2.lowerconf)
-    upper.conf = c(fe.upperconf,re.upperconf,tauSq.upperconf,Q.upperconf,H2.upperconf,I2.upperconf)
-    
-    TAB = cbind(c(object$fixef$mean,object$ranef$mean,object$ranef$tauSq,object$Q$Q,object$H2$H2,object$I2$I2),lower.conf=lower.conf,upper.conf=upper.conf)
-    rownames(TAB) = c("mu (fixed)","mu (random)","Tau squared","Cochran Q","H-square index","I-square index")
-    colnames(TAB) = c("Estimate",paste((alpha*100),"%"),paste(((1-alpha)*100),"%"))
-    res = list(call=object$call,estimates=TAB)
-    class(res) = "summary.macc"
-    res
+    cat("Call:\n")
+    print(object$call)
+    if (object$model=="fixed")  cat(paste("\nFixed effects summary:\t",round(object$results["mu","Mean"],5))," (SE: ",round(sqrt(object$results["mu","Var"]),5), ")",sep="")
+    if (object$model=="random") {
+        cat(paste("\nRandom effects summary:\t",round(object$results["mu","Mean"],5))," (SE: ",round(sqrt(object$results["mu","Var"]),5), ")",sep="")
+        cat(paste("\n\nTau squared: \t\t",round(object$results["tausq","Mean"],5),sep=""))
+    }
+    Q_p = 1-pchisq(object$results["Q","Mean"],df=object$df)
+    cat(paste("\nCochran's Q statistic: \t",round(object$results["Q","Mean"],5)," (p-value: ",round(Q_p,5),")",sep=""))
+    cat(paste("\nI-square index: \t", round(object$results["Isq","Mean"]*100,3)," %\n",sep=""))
 }
 
 

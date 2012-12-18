@@ -47,7 +47,7 @@ rileyES <- function(X = NULL, Y1, Y2, vars1, vars2, optimization = "Nelder-Mead"
 	if (numstudies >= 2) {
 		sumlY1 <- uvmeta(r=Y1, vars=vars1, method="MOM")
 		sumlY2 <- uvmeta(r=Y2, vars=vars2, method="MOM")
-		pars.start = c(sumlY1$ranef$mean,sumlY2$ranef$mean,sqrt(sumlY1$ranef$var),sqrt(sumlY2$ranef$var),0)
+		pars.start = c(sumlY1$results["mu","Mean"],sumlY2$results["mu","Mean"],sqrt(sumlY1$results["mu","Var"]),sqrt(sumlY2$results["mu","Var"]),0)
 	}
 	
 	negfullloglik <- function(pars,Y,vars)

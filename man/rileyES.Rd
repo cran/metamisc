@@ -19,8 +19,8 @@ rileyES(X = NULL, Y1, Y2, vars1, vars2, optimization = "Nelder-Mead", control = 
   \item{vars1}{vector of numerics representing the error variances of \code{Y1}, ignored if \code{X} is not \code{NULL}}
   \item{Y2}{vector of numerics representing the effect sizes of outcome 2, ignored if \code{X} is not \code{NULL}}
   \item{vars2}{vector of numerics representing the error variances of \code{Y2}, ignored if \code{X} is not \code{NULL}}
-  \item{optimization}{The optimization method that should be used for minimizing the negative (restricted) log-likelihood function. The default method is an implementation of that of Nelder and Mead (1965), that uses only function values and is robust but relatively slow. It will work reasonably well for non-differentiable functions. Other methods are described in \code{\link{optim}}.}
-  \item{control}{ A list of control parameters to pass to \code{optim}.}
+  \item{optimization}{The optimization method that should be used for minimizing the negative (restricted) log-likelihood function. The default method is an implementation of that of Nelder and Mead (1965), that uses only function values and is robust but relatively slow. Other methods are described in \code{\link{optim}}.}
+  \item{control}{ A list of control parameters to pass to \code{\link{optim}}.}
   \item{\dots}{arguments to be passed on to other functions, currently ignored}
 }
 

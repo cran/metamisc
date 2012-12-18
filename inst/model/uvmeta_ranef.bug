@@ -1,0 +1,20 @@
+model {
+	for (i in 1:k) {
+		w[i] <- 1/vars[i]
+		r[i] ~ dnorm(theta[i],w[i])
+		theta[i] ~ dnorm(mu,prec)
+	}
+
+	#Calculate Cochran Q
+	Q <- sum(w*(r-mu)**2)
+
+	#Calculate I2
+	dfr <- k-1
+	Isq <- max(0,(Q-dfr)/Q)
+
+	#prior distributions
+	mu ~ dnorm(0,0.001)
+	tau ~ dunif(0,100)
+	tausq <- tau*tau
+	prec <- 1/(tausq)
+}

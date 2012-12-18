@@ -3,17 +3,16 @@
 
 \title{Parameter summaries}
 
-\description{This function provides summary estimates of univariate random-effects models with their corresponding confidence intervals. The model parameters are given as mu (overall treatment effect) and tau squared (between-study variance).}
+\description{This function provides summary estimates of a univariate meta-analysis model.}
 
-\usage{ \method{summary}{uvmeta}(object, level = 0.95, \ldots)}
+\usage{ \method{summary}{uvmeta}(object, \ldots)}
 
 \arguments{
   \item{object}{ a \code{uvmeta} object.}
-  \item{level}{ numeric, the level for calculations of confidence intervals }
   \item{\dots}{ arguments to be passed on to other functions }
 }
 
-\value{ Array containing confidence regions for the overall treatment effect and heterogeneity measures.}
+\value{ The model parameters are given as \code{mu} (overall treatment effect),\code{tausq} (between-study variance if random effects were assumed), \code{Q} (Cochran's Q statistic) and \code{Isq} (I-square index).}
 
 \references{
 DerSimonian R, Laird N. Meta-analysis in clinical trials. \emph{Controlled Clinical Trials} 1986; \bold{7}: 177--188.
@@ -29,7 +28,7 @@ Riley RD, Higgins JPT, Deeks JJ. Interpretation of random effects meta-analyses.
 
 \author{ Thomas Debray <thomas.debray@gmail.com> }
 
-\note{ There are no confidence intervals for the tau-parameter, as it is considered fixed. }
+\note{ There are no confidence intervals for \code{tausq} when estimated with a frequentistic approach, as it is considered fixed. }
 
 \seealso{
 \code{\link{uvmeta}}
