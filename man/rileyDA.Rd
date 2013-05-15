@@ -11,7 +11,8 @@
 
 \usage{
 rileyDA(X = NULL, TP, FN, FP, TN, correction = 0.5, 
-           correction.control = "all", optimization = "Nelder-Mead", control = list(), ...)
+           correction.control = "all", optimization = "Nelder-Mead", 
+           control = list(), ...)
 }
 
 \arguments{

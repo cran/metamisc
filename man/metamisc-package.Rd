@@ -7,8 +7,8 @@
 \tabular{ll}{
 Package: \tab metamisc\cr
 Type: \tab Package\cr
-Version: \tab 0.0.4\cr
-Date: \tab 2012-11-13\cr
+Version: \tab 0.1.0\cr
+Date: \tab 2013-05-15\cr
 License: \tab GPL-2 \cr
 }
 The package provides tools for the meta-analysis of individual participant (IPD) and/or aggregate data (AD). At this stage, it is possible to pool univariate (with \code{\link{uvmeta}}) and bivariate (with \code{\link{riley}}) summary data using frequentist and Bayesian approaches.}

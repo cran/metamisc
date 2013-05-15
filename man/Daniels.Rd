@@ -9,12 +9,12 @@
 \usage{data("Daniels")}
 
 
-\format{One data frame with 4 variables.
+\format{A data frame with 15 observations on the following 2 variables.
   \describe{
-  \item{Y1}{Treatment differences for the log hazard ratio for the development of AIDS or death over 2 years.}  
-  \item{vars1}{Error variances of Y1.}  
-  \item{Y2}{Difference in mean change in CD4 cell count between baseline and 6 month for studies of the AIDS Clinical Trial Group}  
-  \item{vars2}{Error variances of Y2.}  
+  \item{\code{Y1}}{Treatment differences for the log hazard ratio for the development of AIDS or death over 2 years.}  
+  \item{\code{vars1}}{Error variances of Y1.}  
+  \item{\code{Y2}}{Difference in mean change in CD4 cell count between baseline and 6 month for studies of the AIDS Clinical Trial Group}  
+  \item{\code{vars2}}{Error variances of Y2.}  
   }
 }
 

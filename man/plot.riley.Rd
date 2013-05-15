@@ -7,9 +7,9 @@ Plot the summary of the bivariate model from Riley et al. (2008).
 \description{
 This function plots the summary sensitivity and false positive rate with their corresponding confidence regions.
 }
-\usage{\method{plot}{riley}(x, plotsumm = TRUE, plotnumerics = TRUE, level = 0.95, main="",
-                       ylim = c(0,1), xlim = c(0,1), pch = 1, lty = 1, lwd = 1, cex.numerics=0.45,
-                       add=FALSE, \ldots)}
+\usage{\method{plot}{riley}(x, plotsumm = TRUE, plotnumerics = TRUE, level = 0.95, 
+main="", ylim = c(0,1), xlim = c(0,1), pch = 1, lty = 1, lwd = 1, 
+cex.numerics=0.45, add=FALSE, \ldots)}
 
 \arguments{
   \item{x}{a \code{riley} object.}

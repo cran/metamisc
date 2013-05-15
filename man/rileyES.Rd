@@ -10,7 +10,8 @@
 \description{ This function fits the alternative model for bivariate random-effects meta-analysis on effect size data when the within-study correlations are unknown. This bivariate model was proposed by Riley et al. (2008) and is similar to the bivariate random-effects model from Reitsma et al. (2005), but includes an overall correlation parameter rather than separating the (usually unknown) within- and between-study correlation. As a consequence, the alternative model is not fully hierarchical, and estimates of additional variation beyond sampling error (\code{psi}) are not directly equivalent to the between-study variation (\code{tau}) from the general model. Furthermore, it has been argumented that assuming zero within-study correlations (i.e. applying Reitsma's approach) is reasonable when summarizing the sensitivities and false positive rates of a diagnostic test (Reitsma et al. 2005, Daniels and Hughes 1997, Korn et al. 2005, Thompson et al. 2005, Van Houwelingen et al. 2002). The alternative model for bivariate random-effects meta-analysis may, however, be useful when there is large within-study variability, few primary studies are available or the general model estimates the between-study correlation as 1 or -1.}
 
 \usage{
-rileyES(X = NULL, Y1, Y2, vars1, vars2, optimization = "Nelder-Mead", control = list(),...)
+rileyES(X = NULL, Y1, Y2, vars1, vars2, optimization = "Nelder-Mead", 
+           control = list(),...)
 }
 
 \arguments{
@@ -24,7 +25,7 @@ rileyES(X = NULL, Y1, Y2, vars1, vars2, optimization = "Nelder-Mead", control = 
   \item{\dots}{arguments to be passed on to other functions, currently ignored}
 }
 
-\details{ The following parameters are estimated by iteratively maximizing the restriced log-likelihood using the Newton-Raphson procedure: logit of sensitivity (\code{beta1}), logit of false positive rate (\code{beta2}), additional variation of \code{beta1} beyond sampling error (\code{psi1}), additional variation of \code{beta2} beyond sampling error (\code{psi2}) and a transformation of the correlation between \code{psi1} and \code{psi2} (\code{rhoT}). The original correlation is given as \code{inv.logit(rhoT)*2-1}. The results from a univariate random-effects meta-analysis with a method-of-moments estimator are used as starting values for \code{beta1}, \code{beta2}, \code{psi1} and \code{psi2} in the \code{optim} command. The starting value for \code{rhoT} is 0. Standard errors for all parameters are obtained from the inverse Hessian matrix. }
+\details{ The following parameters are estimated by iteratively maximizing the restriced log-likelihood using the Newton-Raphson procedure: pooled effect size for outcome 1 (\code{beta1}), pooled effect size for outcome 2 (\code{beta2}), additional variation of \code{beta1} beyond sampling error (\code{psi1}), additional variation of \code{beta2} beyond sampling error (\code{psi2}) and a transformation of the correlation between \code{psi1} and \code{psi2} (\code{rhoT}). The original correlation is given as \code{inv.logit(rhoT)*2-1}. The results from a univariate random-effects meta-analysis with a method-of-moments estimator are used as starting values for \code{beta1}, \code{beta2}, \code{psi1} and \code{psi2} in the \code{optim} command. The starting value for \code{rhoT} is 0. Standard errors for all parameters are obtained from the inverse Hessian matrix. }
 
 \value{ An object of the class \code{riley} for which many standard methods are available. A warning message is casted when the Hessian matrix contains negative eigenvalues, which implies that the identified solution is a saddle point and thus not optimal.}
 

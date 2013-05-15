@@ -17,4 +17,8 @@ model {
 	tau ~ dunif(0,100)
 	tausq <- tau*tau
 	prec <- 1/(tausq)
+
+ # predictive distribution
+ theta.new ~ dnorm(mu,prec)
+
 }

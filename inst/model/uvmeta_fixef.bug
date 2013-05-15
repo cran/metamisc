@@ -14,4 +14,7 @@ model {
 	#prior distributions
 	mu ~ dnorm(0,0.001)
 
+ # predictive distribution
+ theta.new <- mu
+
 }
