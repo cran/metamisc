@@ -1,15 +1,15 @@
-09e7c8341ee384eeb709a66b97951ff8 *DESCRIPTION
+68f09b75913a774fd2f10c691ad51d95 *DESCRIPTION
 fff9222a29ebefd07d6a78db2b66920f *NAMESPACE
 2f1fa7c58b6685cd684c74707d4e39eb *R/basics.r
 5ec87641e536fcf20b2f9323afec66b2 *R/riley.r
-3a8c94ec286b03ab997c9a6cb90d1917 *R/uvmeta.r
+23a595d8ed0a3ab068a2fbce5dc5695c *R/uvmeta.r
 51a484e8d5ffd4daa8062795079b7245 *data/Collins.rda
 191c4d64686671c3b73ecdfd7afa3523 *data/Daniels.rda
 0f15f87b6342fb650e6af37538c2597f *data/Kertai.rda
 30d788914c181361fdaeeffe7825ab1a *data/Roberts.rda
 8f977106555f6929f31fed56a8dcdf99 *data/Scheidler.rda
-b0c0aad5ecbccbd11912f96e53e6cc90 *inst/model/uvmeta_fixef.bug
-7e7b17d84b0dedcab12dfc4d34d76e7d *inst/model/uvmeta_ranef.bug
+b287427aded16d4838a1a8db9ed3a882 *inst/model/uvmeta_fixef.bug
+4fa76646a491bc2ecb9dbb31d28f6615 *inst/model/uvmeta_ranef.bug
 d6f5094304ace33141215340ff49296f *man/Collins.Rd
 0e2a57ec41ec07f70d3f429863ec1223 *man/Daniels.Rd
 b327f2eaaae96db42d7cb928e3e67e89 *man/Kertai.Rd
@@ -18,7 +18,7 @@ f5630a0cee8dfd5c46ed9a1cd713870e *man/Scheidler.Rd
 a0745165e220630c2e1385549341d957 *man/inv.logit.Rd
 1f84b355e8518f758067c1125278af05 *man/logLik.riley.Rd
 ccdb6c4d629978f139abeff18a56bd62 *man/logit.Rd
-b502dc6cb2bf56a162497a0c08377818 *man/metamisc-package.Rd
+8309175cce78c5aabbf9bb4ac240ef76 *man/metamisc-package.Rd
 81b4e3ecc97e97e80ba5f00611264ee0 *man/plot.riley.Rd
 0e4adca754b23f6531edfa0f91edfb52 *man/predict.riley.Rd
 e81becd1d885c222c1ced26247212629 *man/riley.Rd
@@ -27,5 +27,5 @@ e81becd1d885c222c1ced26247212629 *man/riley.Rd
 b9beed3b6f7ddcd6f80edd81126b4ad1 *man/summary.riley.Rd
 ba3df7c594fd7f0b587480a5309feb75 *man/summary.uvmeta.Rd
 276991b83846dba84ee89db47328acae *man/uvmeta-class.Rd
-d3480f062d6730cd23c13d5103f22294 *man/uvmeta.Rd
+9913cb59b2df5c44d7f53434b290b739 *man/uvmeta.Rd
 bbcd6ebf151eb599e663c6f17cde7594 *man/vcov.riley.Rd
