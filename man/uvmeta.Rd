@@ -16,18 +16,23 @@ uvmeta(r, vars, model="random", method="MOM", labels, na.action, pars,
   \item{r}{vector of numerics containing the effect sizes}
   \item{vars}{vector of numerics containing the error variance of the effect sizes}
   \item{model}{Assume "random" or "fixed" effects.}
-  \item{method}{Estimation method: use "MOM" to implement the non-parametric method-of-moment estimator from DerSimonian and Laird, "ml" to implement the maximum-likelihood estimator, "pl" to use the profile-likelihood estimator or "bayes" to implement a Bayesian meta-analysis assuming normality of the random effects (Higgins 2009).}
+  \item{method}{Estimation method: use "MOM" to implement the non-parametric method-of-moment estimator from DerSimonian and Laird, "ml" to implement the maximum-likelihood estimator, "pl" to use the profile-likelihood estimator or "BAYES" to implement a (random effects) Bayesian meta-analysis assuming normality of the random effects (Higgins 2009).}
   \item{labels}{vector of characters containing the labels for the studies}
   \item{na.action}{a function which indicates what should happen when the data contain NAs. Defaults to "na.fail", other options are "na.omit", "na.exclude" or "na.pass".}
-  \item{pars}{A list with additional arguments. Use "level" to specify the level of confidence or credibility intervals. The following parameters configure the MCMC sampling procedure and are ignored if \code{method="MOM"}:  \code{hp.mu.mean} (Hyperparameter: mean of the prior distribution of the fixed/random effects model, defaults to zero), \code{hp.mu.var} (Hyperparameter: variance of the prior distribution of the fixed/random effects model, defaults to 1000), \code{n.chains} (specifies the number of parallel chains), \code{n.adapt} (specifies the number of iterations for adaptation), \code{n.init} (number of iterations to run for initializing the Markov chain) and \code{n.iter} (number of iterations to monitor).}
+  \item{pars}{A list with additional arguments. Use "level" to specify the level of confidence or credibility intervals. The following parameters configure the MCMC sampling procedure and are ignored if \code{method="MOM"}:  \code{hp.mu.mean} (Hyperparameter: mean of the prior distribution of the fixed/random effects model, defaults to zero), \code{hp.mu.var} (Hyperparameter: variance of the prior distribution of the fixed/random effects model, defaults to 1000), \code{n.chains} (specifies the number of parallel chains)}
   \item{verbose}{if TRUE then messages generated during the fitting process will be displayed.}
-  \item{\dots}{arguments to be passed on to other functions}
+  \item{\dots}{arguments to be passed on to other functions including \code{run.jags}}
 }
 
-\details{The Bayesian approach uses an uninformative Normal prior for the mean and an uninformative uniform prior for the variance of the pooled effect size (Higgins 2009).  For random effects models, a prediction interval for the pooled effect size is displayed. This interval predicts in what range future effect sizes will fall given what has already been observed (Higgins 2009, Riley 2011).  
+\details{For random effects models, a prediction interval for the pooled effect size is displayed. This interval predicts in what range future effect sizes will fall given what has already been observed (Higgins 2009, Riley 2011).  
+
+\bold{Bayesian meta-analysis models}
+
+
+For Bayesian meta-analysis models that involve the Gibbs sampler (\code{method="BAYES"}), the R packages \code{runjags} and \code{rjags} must be installed. The Bayesian approach uses an uninformative Normal prior for the mean and a uniform prior for the between-study variance of the pooled effect size (Higgins 2009). By default, the Normal prior has a mean of 0 and a variance of 1000. These hyperparameters can, however, be altered through the variables \code{hp.mu.mean} and \code{hp.mu.var} in the argument \code{pars}. The prior distribution of the between-study standard deviation is given by a uniform distribution, bounded between 0 and 100. Future versions of \code{metamisc} will allow to alter these boundaries.
 }
 
-\value{ An object of the class \code{uvmeta} for which many standard methods are available. }
+\value{ An object of the class \code{uvmeta} for which many standard methods are available. If \code{method="BAYES"}, the results contain an object of the class \code{runjags}. }
 
 \references{
 Biggerstaff BJ, Tweedie RL. Incorporating variability in estimates of heterogeneity in the random effects model in meta-analysis. \emph{Statistics in Medicine} 1997; \bold{16}:  753--768.
@@ -59,19 +64,20 @@ Rucker G, Schwarzer G, Carpenter JR, Schumacher M . Undue reliance on I2 in asse
 \examples{
 data(Roberts)
 
-#Extract effect size and error variance
+# Extract effect size and error variance
 r <- Roberts$SDM
 vars <- Roberts$SE**2
 
-#Frequentist random-effects meta-analysis
-fit1 <- uvmeta(r,vars,labels=rownames(Roberts))
+# Frequentist random-effects meta-analysis
+fit1 <- uvmeta(r, vars, labels=rownames(Roberts))
 plot(fit1, main="Forest plot") #show a forest plot
 fit1
 
+\dontrun{
+# Bayesian random-effects meta-analysis
+fit2 <- uvmeta(r, vars, method="BAYES")
+fit2}
 
-#Bayesian random-effects meta-analysis
-#fit2 <- uvmeta(r,vars,method="bayes")
-#fit2
 }
 
 \keyword{ DerSimonian }

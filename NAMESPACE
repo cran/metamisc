@@ -1,8 +1,21 @@
 export("riley")
 export("uvmeta")
-import("rjags")
-import("coda")
+export("valmeta")
 
+import("ellipse")
+#import("runjags")
+import("metafor")
+#import("coda")
+import("mvtnorm")
+import("bbmle")
+import("survival")
+
+importFrom("graphics", "abline", "axis", "box", "lines", "par", "points", "polygon", "text", "segments", "strheight")
+importFrom("stats", "coefficients", "dnorm", "optim", "pchisq", "qnorm", "qt", "rnorm", "runif")
+
+  
+  
+#Riley methods
 S3method(print, riley)
 S3method(summary, riley)
 S3method(print, summary.riley)
@@ -11,10 +24,14 @@ S3method(logLik, riley)
 S3method(plot, riley)
 S3method(riley, default)
 
+#uvmeta methods
 S3method(print, uvmeta)
 S3method(plot, uvmeta)
 S3method(summary, uvmeta)
 S3method(uvmeta, default)
 
-
- 
+#valmeta methods
+S3method(print, valmeta)
+S3method(plot, valmeta)
+S3method(print, vmasum )
+#S3method(valmeta, default)
