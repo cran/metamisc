@@ -16,7 +16,7 @@ uvmeta(r, vars, model="random", method="MOM", labels, na.action, pars,
   \item{r}{vector of numerics containing the effect sizes}
   \item{vars}{vector of numerics containing the error variance of the effect sizes}
   \item{model}{Assume "random" or "fixed" effects.}
-  \item{method}{Estimation method: use "MOM" to implement the non-parametric method-of-moment estimator from DerSimonian and Laird, "ml" to implement the maximum-likelihood estimator, "pl" to use the profile-likelihood estimator or "BAYES" to implement a (random effects) Bayesian meta-analysis assuming normality of the random effects (Higgins 2009).}
+  \item{method}{Estimation method: use "MOM" to implement the non-parametric method-of-moment estimator from DerSimonian and Laird, "ml" to implement the maximum-likelihood estimator, or "BAYES" to implement a (random effects) Bayesian meta-analysis assuming normality of the random effects (Higgins 2009).}
   \item{labels}{vector of characters containing the labels for the studies}
   \item{na.action}{a function which indicates what should happen when the data contain NAs. Defaults to "na.fail", other options are "na.omit", "na.exclude" or "na.pass".}
   \item{pars}{A list with additional arguments. Use "level" to specify the level of confidence or credibility intervals. The following parameters configure the MCMC sampling procedure and are ignored if \code{method="MOM"}:  \code{hp.mu.mean} (Hyperparameter: mean of the prior distribution of the fixed/random effects model, defaults to zero), \code{hp.mu.var} (Hyperparameter: variance of the prior distribution of the fixed/random effects model, defaults to 1000), \code{n.chains} (specifies the number of parallel chains)}

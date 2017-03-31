@@ -9,25 +9,6 @@ uvmeta.default <- function(r, vars, model="random", method="MOM", labels, na.act
                            pars, verbose=FALSE, ...)
 {
 
-  calcProfile <- function (mleObj, pars) {
-    levels = c(pars$level, 0.50)
-    quantiles = c(((1-pars$level)/2),0.50,((1-(1-pars$level)/2)))
-    pci = array(NA,dim=c(length(coef(mleObj)),3))
-    colnames(pci) = paste(quantiles*100,"%",sep=" ")
-    for (i in 1:length(levels)) {
-      pcint <- confint(mleObj,level=levels[i], quietly=T)
-      
-      if (length(coef(mleObj))>1) {
-        cols.select <- which(colnames(pcint) %in% colnames(pci))
-        pci[,colnames(pcint)[cols.select]] <- pcint[,cols.select]
-      } else {
-        cols.select <- which(names(pcint) %in% colnames(pci))
-        pci[,names(pcint)[cols.select]] <- pcint[cols.select]
-      }
-            
-    }
-    return(pci)
-  }
   
   pars.default <- list(level = 0.95,
                        hp.mu.mean = 0, 
@@ -65,7 +46,7 @@ uvmeta.default <- function(r, vars, model="random", method="MOM", labels, na.act
   if (!missing(pars)) {
     for (i in 1:length(pars)) {
       element <- ls(pars)[i]
-      pars.default[[element]] <- pars[[i]]
+      pars.default[[element]] <- pars[[element]]
     }
   }
   
@@ -128,7 +109,7 @@ uvmeta.default <- function(r, vars, model="random", method="MOM", labels, na.act
     
     est <- list(results=results, model=model,df=dfr,numstudies=numstudies, pred.int=pred.int)
     
-  } else if (method=="ml" | method=="pl") {
+  } else if (method=="ml") {
     results <- as.data.frame(array(NA,dim=c(4, length(quantiles)+2)))
     colnames(results) <- c("Estimate","Var",paste(quantiles*100,"%",sep=""))
     rownames(results) <- c("mu","tausq","Q","Isq")
@@ -154,15 +135,9 @@ uvmeta.default <- function(r, vars, model="random", method="MOM", labels, na.act
     if (model=="random") {
       mle.random <- mle2(minuslogl=mle.loglik.random,start=list(theta=0, tausq=0),data=list(ds=ds),method="L-BFGS-B",lower=list(theta=-Inf,tausq=0))
       
-      if (method=="pl") {
-        profile <- calcProfile(mle.random, pars.default)  #Use profile likelihood confidence intervals
-        results["mu",] <- c(coef(mle.random)["theta"],diag(vcov(mle.random))["theta"],profile[1,])
-        results["tausq",] <- c(coef(mle.random)["tausq"],diag(vcov(mle.random))["tausq"],profile[2,])
-      } else {
-        results["mu",] <- c(coef(mle.random)["theta"],diag(vcov(mle.random))["theta"],coef(mle.random)["theta"]+qnorm(quantiles)*sqrt(diag(vcov(mle.random))["theta"]))
-        results["tausq",] <- c(coef(mle.random)["tausq"],diag(vcov(mle.random))["tausq"],rep(NA,length(quantiles)))
-      }
-      
+      results["mu",] <- c(coef(mle.random)["theta"],diag(vcov(mle.random))["theta"],coef(mle.random)["theta"]+qt(quantiles,df=(numstudies-1))*sqrt(diag(vcov(mle.random))["theta"]))
+      results["tausq",] <- c(coef(mle.random)["tausq"],diag(vcov(mle.random))["tausq"],rep(NA,length(quantiles)))
+    
       # Calculate I2 
       Isq <- (results["Q",]-dfr)/results["Q",]
       Isq[which(Isq>1)] <- 1
@@ -170,8 +145,7 @@ uvmeta.default <- function(r, vars, model="random", method="MOM", labels, na.act
       results["Isq",] = Isq
       loglik = -attr(mle.random,"min")
     } else {
-      profile <- calcProfile(mle.fixed,pars.default)  #Use profile likelihood confidence intervals
-      results["mu",] <- c(coef(mle.fixed)["theta"],diag(vcov(mle.fixed))["theta"],profile)
+      results["mu",] <- c(coef(mle.fixed)["theta"],diag(vcov(mle.fixed))["theta"],coef(mle.fixed)["theta"]+qnorm(quantiles)*sqrt(diag(vcov(mle.fixed))["theta"]))
       results["tausq",] <- c(0,0,rep(0,length(quantiles)))
       loglik <- -attr(mle.fixed,"min")
     }
@@ -295,7 +269,7 @@ print.uvmeta <- function(x, ...)
     cat(paste("\n\nPrediction interval for mu:\n\n"))
     print(x$pred.int)
   }
-  if(x$method=="ml" | x$method=="pl") { #display MLE
+  if(x$method=="ml") { #display MLE
     cat(paste("\nLog-likelihood: ", round(x$loglik,2),"\n"))
   } else if (x$method=="BAYES") {
     cat(paste("\nPenalized expected deviance: ", round(x$popt,3),"\n"))

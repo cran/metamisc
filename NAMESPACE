@@ -7,14 +7,14 @@ import("ellipse")
 import("metafor")
 #import("coda")
 import("mvtnorm")
-import("bbmle")
+#import("bbmle")
 import("survival")
 
-importFrom("graphics", "abline", "axis", "box", "lines", "par", "points", "polygon", "text", "segments", "strheight")
-importFrom("stats", "coefficients", "dnorm", "optim", "pchisq", "qnorm", "qt", "rnorm", "runif")
+importFrom("lme4", "glmer")
+importFrom("bbmle", "mle2")
+importFrom("graphics", "abline", "axis", "box", "lines", "par", "plot", "points", "polygon", "text", "segments", "strheight")
+importFrom("stats", "coef", "coefficients", "dnorm", "glm", "optim", "pchisq", "qnorm", "qt", "rnorm", "runif", "confint", "poisson", "predict", "vcov")
 
-  
-  
 #Riley methods
 S3method(print, riley)
 S3method(summary, riley)

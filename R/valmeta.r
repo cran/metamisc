@@ -1,24 +1,46 @@
-#TODO: A package listed in "Suggests" or "Enhances" should be used conditionally 
-# in examples or tests if it cannot straightforwardly be installed on the major R platforms.
-
-valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.95CI,
-                    N, O, E, method="REML", knha=TRUE, verbose=FALSE, 
-                    method.restore.c.se="Newcombe.4", scale.c = "logit", 
-                    scale.oe = "log", n.chains = 4,
-                    ...) {
+valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.se, OE.95CI, citl, citl.se,
+                    N, O, E, Po, Po.se, Pe, t.val, t.ma, method="REML", knha=TRUE, verbose=FALSE, 
+                    slab, n.chains = 4, pars, ...) {
+  pars.default <- list(hp.mu.mean = 0, 
+                       hp.mu.var = 1E6,
+                       hp.tau.min = 0,
+                       hp.tau.max = 2,
+                       hp.tau.sigma = 0.5,
+                       hp.tau.dist = "dunif", 
+                       hp.tau.df = 3, 
+                       method.restore.c.se="Newcombe.4",
+                       model.cstat = "normal/logit", #Alternative: "normal/identity"
+                       model.oe = "normal/log") #Alternative: "poisson/log" or "normal/identity"
+  
+  if (!missing(pars)) {
+    for (i in 1:length(pars)) {
+      element <- ls(pars)[i]
+      pars.default[[element]] <- pars[[element]]
+    }
+  }
+  
+  
   out <- list()
   out$call <- match.call()
   out$method <- method
   class(out) <- "valmeta"
   
   N.studies.OE <- 0
-  
   if (!missing(OE)) {
     N.studies.OE <- length(OE)
   } else if (!missing(E)) {
     N.studies.OE <- length(E)
+  } else if (!missing(Pe)) {
+    N.studies.OE <- length(Pe)
+  }else if (!missing(citl)) {
+    N.studies.OE <- length(citl)
   }
   
+  t.ma <- ifelse(missing(t.ma), NA, t.ma)
+  t.val <- ifelse(missing(t.val), NA, t.val)
+  
+  #make sure knha is only used for random effec models
+  knha <- ifelse(method=="FE", F, knha)
   
 
   inv.logit <- function(x) {  if(is.numeric(x)) 1/(1+exp(-x)) else stop("x is not numeric!") }
@@ -33,35 +55,6 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.95CI,
       stop("The package 'rjags' is currently not installed!")
     } 
   }
-  
-  
-  #Update SE(c.index) using Method 4 of Newcombe
-  restore.c.var<- function(cstat, N.subjects, N.events, restore.method="Newcombe.4", scale=scale.c) {
-    n <- N.events #Number of events
-    m <- N.subjects-N.events #Number of non-events
-    
-    if (missing(restore.method)) {
-      restore.method <- "Newcombe.4"
-    }
-    
-    if (restore.method=="Hanley" | restore.method=="Newcombe.2") {
-      mstar <- m-1
-      nstar <- n-1
-    } else if (restore.method=="Newcombe.4") {
-      mstar <- nstar <- N.subjects/2-1
-    } else {
-      stop ("Method not implemented yet!")
-    }
-    
-    if (scale=="logit") {
-      out <- (((1+nstar*(1-cstat)/(2-cstat) + mstar*cstat/(1+cstat)))/(m*n*cstat*(1-cstat)))
-    } else {
-      out <- ((cstat*(1-cstat)*(1+nstar*(1-cstat)/(2-cstat) + mstar*cstat/(1+cstat)))/(m*n))
-    }
-    
-    return(out)
-  }
-  
   
   if(!missing(cstat)) {
     if (missing(cstat.se) & missing(cstat.95CI)) {
@@ -83,19 +76,25 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.95CI,
     }
     
     out$cstat <- list()
-    out$cstat$method.restore.se <- method.restore.c.se 
-    out$cstat$scale <- scale.c
+    out$cstat$method.restore.se <- pars.default$method.restore.c.se 
+    out$cstat$model <- pars.default$model.cstat
     class(out$cstat) <- "vmasum"
     
+    if(missing(slab)) {
+      out$cstat$slab <- paste("Study",seq(1, length(cstat)))
+    } else {
+      out$cstat$slab <- slab
+    }
+    
     # Apply necessary data transformations
-    if (scale.c == "identity") {
+    if (pars.default$model.cstat == "normal/identity") {
       theta <- cstat
       theta.var <- (cstat.se)**2
       theta.cil <- cstat.95CI[,1]
       theta.ciu <- cstat.95CI[,2]
       theta.var.CI <- ((theta.ciu - theta.cil)/(2*qnorm(0.975)))**2 #Derive from 95% CI
       theta.var <- ifelse(is.na(theta.var), theta.var.CI, theta.var) #Prioritize reported SE
-    } else if (scale.c == "logit") {
+    } else if (pars.default$model.cstat == "normal/logit") {
       theta <- log(cstat/(1-cstat))
       theta.var <- (cstat.se/(cstat*(1-cstat)))**2
       theta.cil <- logit(cstat.95CI[,1])
@@ -103,7 +102,7 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.95CI,
       theta.var.CI <- ((theta.ciu - theta.cil)/(2*qnorm(0.975)))**2
       theta.var <- ifelse(is.na(theta.var.CI), theta.var, theta.var.CI) #Prioritize variance from 95% CI
     } else {
-      stop(paste("No appropriate transformation defined: '", scale.c, "'", sep=""))
+      stop(paste("No appropriate meta-analysis model defined: '", pars.default$model.cstat, "'", sep=""))
     }
     
     num.estimated.var.c <- 0
@@ -113,7 +112,8 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.95CI,
       # Restore missing estimates of the standard error of the c-statistic using information on c, N and O
       if (!missing(O) & !missing(N)) {
         if (verbose) cat("Attempting to restore missing information on the standard error of the c-statistic\n")
-        theta.var.hat <- restore.c.var(cstat=cstat, N.subjects=N, N.events=O, restore.method=method.restore.c.se, scale=scale.c)
+        theta.var.hat <- restore.c.var(cstat=cstat, N.subjects=N, N.events=O, 
+                                       restore.method=pars.default$method.restore.c.se, model=pars.default$model.cstat)
         num.estimated.var.c <- length(which(is.na(theta.var) & !is.na(theta.var.hat)))
         theta.var <- ifelse(is.na(theta.var), theta.var.hat, theta.var)
       }
@@ -129,20 +129,25 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.95CI,
     ds <- cbind(theta, sqrt(theta.var), theta.cil, theta.ciu)
     colnames(ds) <- c("theta", "theta.se", "theta.95CIl", "theta.95CIu")
     out$cstat$data <- ds
-    out$cstat$slab <- paste("Study",seq(1, length(theta)))
     out$cstat$num.estimated.var.c <- num.estimated.var.c
     
     if (method != "BAYES") { # Use of rma
       
       # Apply the meta-analysis
-      fit <- rma(yi=theta, vi=theta.var, data=ds, method=method, knha=knha, ...) 
+      fit <- rma(yi=theta, vi=theta.var, data=ds, method=method, knha=knha, slab=out$cstat$slab, ...) 
       preds <- predict(fit)
       
       results <- as.data.frame(array(NA, dim=c(1,5)))
-      if (scale.c == "logit") {
-        results <- c(inv.logit(coefficients(fit)), inv.logit(c(preds$ci.lb, preds$ci.ub, preds$cr.lb, preds$cr.ub)))
+      if (pars.default$model.cstat == "normal/logit") {
+        cr.lb <- ifelse(method=="FE", NA, preds$cr.lb)
+        cr.ub <- ifelse(method=="FE", NA, preds$cr.ub)
+        results <- c(inv.logit(coefficients(fit)), inv.logit(c(preds$ci.lb, preds$ci.ub, cr.lb, cr.ub)))
+      } else if (pars.default$model.cstat == "normal/identity") {
+        cr.lb <- ifelse(method=="FE", NA, preds$cr.lb)
+        cr.ub <- ifelse(method=="FE", NA, preds$cr.ub)
+        results <- c(coefficients(fit), c(preds$ci.lb, preds$ci.ub, cr.lb, cr.ub))
       } else {
-        results <- c(coefficients(fit), c(preds$ci.lb, preds$ci.ub, preds$cr.lb, preds$cr.ub))
+        stop ("Meta-analysis model not implemented yet")
       }
       names(results) <- c("estimate", "95CIl", "95CIu", "95PIl", "95PIu")
       
@@ -150,19 +155,19 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.95CI,
       out$cstat$results <- results
     } else {
       # Perform a Bayesian meta-analysis
-      model <- .generateBugsCstat(link=scale.c, ...)
+      model <- .generateBugsCstat(pars=pars.default, ...)
       
       # Generate initial values from the relevant distributions
       model.pars <- list()
-      model.pars[[1]] <- list(param="mu.tobs", param.f=rnorm, param.args=list(n=1, mean=0, sd=sqrt(1E6)))
-      model.pars[[2]] <- list(param="bsTau", param.f=runif, param.args=list(n=1, min=0, max=2))
+      model.pars[[1]] <- list(param="mu.tobs", param.f=rnorm, param.args=list(n=1, mean=pars.default$hp.mu.mean, sd=sqrt(pars.default$hp.mu.var)))
+      model.pars[[2]] <- list(param="bsTau", param.f=runif, param.args=list(n=1, min=pars.default$hp.tau.min, max=pars.default$hp.tau.max))
       inits <- generateMCMCinits(n.chains=n.chains, model.pars=model.pars)
       
       mvmeta_dat <- list(theta = theta,
                          theta.var = theta.var,
                          Nstudies = length(theta))
       jags.model <- runjags::run.jags(model=model, 
-                             monitor = c("mu.tobs", "mu.obs", "pred.obs", "bsTau", "priorTau", "PED"), 
+                             monitor = c("mu.tobs", "mu.obs", "pred.obs", "bsTau", "PED"), 
                              data = mvmeta_dat, 
                              n.chains = n.chains,
                              silent.jags = !verbose,
@@ -186,10 +191,34 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.95CI,
   ##### Prepare data for OE ratio
   if(N.studies.OE > 0) {
     if (missing(N)) {
-      N <- array(NA, dim=N.studies.OE)
+      N <- rep(NA, length=N.studies.OE)
+    }
+    if (missing(O)) {
+      O <- rep(NA, length=N.studies.OE)
+    }
+    if (missing(E)) {
+      E <- rep(NA, length=N.studies.OE)
+    }
+    if (missing(Po)) {
+      Po <- rep(NA, length=N.studies.OE)
+    }
+    if (missing(Po.se)) {
+      Po.se <- rep(NA, length=N.studies.OE)
+    }
+    if (missing(Pe)) {
+      Pe <- rep(NA, length=N.studies.OE)
     }
     if (missing(OE)) {
-      OE <- array(NA, dim=N.studies.OE)
+      OE <- rep(NA, length=N.studies.OE)
+    }
+    if (missing(OE.se)) {
+      OE.se <- rep(NA, length=N.studies.OE)
+    }
+    if (missing(citl)) {
+      citl <- rep(NA, length=N.studies.OE)
+    }
+    if (missing(citl.se)) {
+      citl.se <- rep(NA, length=N.studies.OE)
     }
     if (missing(OE.95CI)) {
       OE.95CI <- array(NA, dim=c(N.studies.OE,2))
@@ -203,61 +232,115 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.95CI,
       OE.95CI <- array(NA, dim=c(N.studies.OE,2))
     }
     
-    out$oe$scale <- scale.oe
-    class(out$oe) <- "vmasum"
-    
-    #TODO: allow confidence intervals of OE ratio
-    #TODO: allow E/O ratio
-    # Apply necessary data transformations
-    if (scale.oe == "identity") {
-      theta <- OE
-      theta <- ifelse(is.na(theta), O/E, theta)
-      theta.var <- O*(1-(O/N))/(E**2) #BMJ eq 20 (binomial var)
-      theta.var <- ifelse(is.na(theta.var), (O/(E**2)), theta.var) #BMJ eq 30 (Poisson var)
-      theta.cil <- OE.95CI[,1]
-      theta.ciu <- OE.95CI[,2]
-      theta.var.CI <- ((theta.ciu - theta.cil)/(2*qnorm(0.975)))**2 #Derive from 95% CI
-      theta.var <- ifelse(is.na(theta.var), theta.var.CI, theta.var) #Prioritize reported SE
-    } else if (scale.oe == "log") {
-      theta <- log(OE)
-      theta <- ifelse(is.na(theta), log(O/E), theta)
-      theta.var <- (1-(O/N))/O #BMJ eq 27 (binomial var)
-      theta.var <- ifelse(is.na(theta.var), (1/O), theta.var) #BMJ eq 36 (Poisson var)
-      theta.cil <- log(OE.95CI[,1])
-      theta.ciu <- log(OE.95CI[,2])
-      theta.var.CI <- ((theta.ciu - theta.cil)/(2*qnorm(0.975)))**2
-      theta.var <- ifelse(is.na(theta.var.CI), theta.var, theta.var.CI) #Prioritize variance from 95% CI
-    } else {
-      stop(paste("No appropriate transformation defined: '", scale.oe, "'", sep=""))
+    # Check if the length of all relevant arguments is consistent
+    if (length(unique(c(length(N), length(O), length(E), length(Po), length(Po.se), 
+                        length(Pe), length(OE), length(OE.se), length(citl),
+                        length(citl.se), dim(OE.95CI)[1]))) > 1) {
+      stop("Dimension mismatch")
     }
     
-    #Only calculate 95% CI for which no original values were available
-    theta.cil[is.na(theta.cil)] <- (theta+qnorm(0.025)*sqrt(theta.var))[is.na(theta.cil)]
-    theta.ciu[is.na(theta.ciu)] <- (theta+qnorm(0.975)*sqrt(theta.var))[is.na(theta.ciu)]
+    out$oe$model <- pars.default$model.oe
+    class(out$oe) <- "vmasum"
     
-    ds <- cbind(theta, sqrt(theta.var), theta.cil, theta.ciu)
-    colnames(ds) <- c("theta", "theta.se", "theta.95CIl", "theta.95CIu")
-    out$oe$data <- ds
-    out$oe$slab <- paste("Study",seq(1, length(theta)))
+    if(missing(slab)) {
+      out$oe$slab <- paste("Study",seq(1, N.studies.OE))
+    } else {
+      out$oe$slab <- slab
+    }
+    
 
+    ds <- generateOEdata(O=O, E=E, Po=Po, Po.se=Po.se, Pe=Pe, OE=OE, OE.se=OE.se, OE.95CI=OE.95CI, 
+                         citl=citl, citl.se=citl.se, N=N, t.ma=t.ma, t.val=t.val,
+                         pars=pars.default)
+    out$oe$data <- ds
+      
     if (method != "BAYES") { # Use of rma
       
-      # Apply the meta-analysis
-      fit <- rma(yi=theta, vi=theta.var, data=ds, method=method, knha=knha, ...) 
-      preds <- predict(fit)
-      
-      results <- as.data.frame(array(NA, dim=c(1,5)))
-      if (scale.oe == "log") {
-        results <- c(exp(coefficients(fit)), exp(c(preds$ci.lb, preds$ci.ub, preds$cr.lb, preds$cr.ub)))
+      if (pars.default$model.oe=="normal/identity") {
+        fit <- rma(yi=ds$theta, sei=ds$theta.se, data=ds, method=method, knha=, slab=out$oe$slab, ...) 
+        preds <- predict(fit)
+        cr.lb <- ifelse(method=="FE", NA, preds$cr.lb)
+        cr.ub <- ifelse(method=="FE", NA, preds$cr.ub)
+        results <- c(coefficients(fit), c(preds$ci.lb, preds$ci.ub, cr.lb, cr.ub))
+        out$oe$rma <- fit
+      } else if (pars.default$model.oe=="normal/log") {
+        fit <- rma(yi=ds$theta, sei=ds$theta.se, data=ds, method=method, knha=knha, slab=out$oe$slab, ...) 
+        preds <- predict(fit)
+        cr.lb <- ifelse(method=="FE", NA, preds$cr.lb)
+        cr.ub <- ifelse(method=="FE", NA, preds$cr.ub)
+        results <- c(exp(coefficients(fit)), exp(c(preds$ci.lb, preds$ci.ub, cr.lb, cr.ub)))
+        out$oe$rma <- fit
+      } else if (pars.default$model.oe=="poisson/log" && method!="FE") {
+        if (method!="ML") warning("The poisson/log model was fitted using ML.")
+        if (knha) warning("The Sidik-Jonkman-Hartung-Knapp correction cannot be applied")
+        
+        fit <- glmer(O~1|Study, offset=log(E), family=poisson(link="log"), data=ds)
+        preds.ci <- confint(fit, quiet=!verbose, ...)
+        preds.cr <- lme4::fixef(fit) + qt(c(0.025, 0.975), df=(lme4::ngrps(fit)-2))*sqrt(vcov(fit)[1,1]+(as.data.frame(lme4::VarCorr(fit))["vcov"])[1,1])
+        results <- c(exp(lme4::fixef(fit)), exp(c(preds.ci["(Intercept)",], preds.cr)))
+        out$oe$lme4 <- fit
+      } else if (pars.default$model.oe=="poisson/log" && method=="FE") {
+        fit <- glm(O~1, offset=log(E), family=poisson(link="log"), data=ds)
+        preds.ci <- confint(fit, quiet=!verbose, ...)
+        preds.cr <- c(NA, NA)
+        results <- c(exp(coefficients(fit)), exp(c(preds.ci, preds.cr)))
+        out$oe$lme4 <- fit
       } else {
-        results <- c(coefficients(fit), c(preds$ci.lb, preds$ci.ub, preds$cr.lb, preds$cr.ub))
+        stop("Model not implemented yet!")
       }
       names(results) <- c("estimate", "95CIl", "95CIu", "95PIl", "95PIu")
       
-      out$oe$rma <- fit
       out$oe$results <- results
     } else {
-      stop("Bayesian method not implemented yet!")
+      if (pars.default$model.oe=="normal/log") {
+        i.select <- which(!is.na(ds$theta.se)) #omit non-informative studies
+        
+        mvmeta_dat <- list(theta=ds$theta[i.select],
+                           theta.var=(ds$theta.se[i.select])**2,
+                           Nstudies = length(i.select))
+      } else if (pars.default$model.oe =="poisson/log") {
+        
+        # Truncate hyper parameter variance
+        pars.default$hp.mu.var = min(pars.default$hp.mu.var, 100)
+        
+        i.select <- which(!is.na(ds$E)) #omit non-informative studies
+        
+        mvmeta_dat <- list(obs=round(ds$O[i.select]),
+                           exc=ds$E[i.select],
+                           Nstudies = length(i.select))
+      } else {
+        stop("Model not implemented yet!")
+      }
+      
+      # Perform a Bayesian meta-analysis
+      model <- generateBugsOE(pars=pars.default, ...)
+      
+      # Generate initial values from the relevant distributions
+      model.pars <- list()
+      model.pars[[1]] <- list(param="mu.tobs", param.f=rnorm, param.args=list(n=1, mean=pars.default$hp.mu.mean, sd=sqrt(pars.default$hp.mu.var)))
+      model.pars[[2]] <- list(param="bsTau", param.f=runif, param.args=list(n=1, min=pars.default$hp.tau.min, max=pars.default$hp.tau.max))
+      inits <- generateMCMCinits(n.chains=n.chains, model.pars=model.pars)
+      
+      
+      jags.model <- runjags::run.jags(model=model, 
+                                      monitor = c("mu.tobs", "mu.obs", "pred.obs", "bsTau", "PED"), 
+                                      data = mvmeta_dat, 
+                                      n.chains = n.chains,
+                                      silent.jags = !verbose,
+                                      inits=inits,
+                                      ...)
+      fit <- jags.model$summaries
+      
+
+      #Extract PED
+      fit.dev <- runjags::extract(jags.model,"PED")
+      
+      results <- c(fit["mu.obs","Mean"], fit["mu.obs", c("Lower95", "Upper95")], fit["pred.obs", c("Lower95", "Upper95")])
+      names(results) <- c("estimate", "95CIl", "95CIu", "95PIl", "95PIu")
+      
+      out$oe$runjags <- jags.model
+      out$oe$PED <- sum(fit.dev$deviance)+sum(fit.dev$penalty)
+      out$oe$results <- results
     }
   }
   
@@ -266,13 +349,13 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.95CI,
   return(out)
 }
 
-.generateBugsCstat <- function(link="logit", #Choose between 'log', 'logit' and 'binom'
-                               prior="dunif", #Choose between dunif (uniform) or dhalft (half student T)
-                               prior.bound=c(0,2), #boundaries for uniform prior
-                               prior.sigma=0.5, ...) # standard deviation for student T prior
+.generateBugsCstat <- function(pars, 
+                                ...) # standard deviation for student T prior
   {
 
-  prior.prec <- 1/(prior.sigma*prior.sigma)
+  hp.tau.prec <- 1/(pars$hp.tau.sima**2)
+  hp.mu.prec <- 1/pars$hp.mu.var
+  
   out <- "model {\n " 
   out <- paste(out, "for (i in 1:Nstudies)\n  {\n")
   out <- paste(out, "    theta[i] ~ dnorm(alpha[i], wsprec[i])\n")
@@ -281,19 +364,16 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.95CI,
   out <- paste(out, " }\n")
   out <- paste(out, " bsprec <- 1/(bsTau*bsTau)\n")
   
-  if (prior=="dunif") {
-    out <- paste(out, "  priorTau ~ dunif(", prior.bound[1], ",", prior.bound[2], ")\n", sep="") 
-    out <- paste(out, "  bsTau ~ dunif(", prior.bound[1], ",", prior.bound[2], ")\n", sep="") 
-  } else if (prior=="dhalft") {
-    out <- paste(out, "  priorTau ~ dt(0,", prior.prec, ",3)T(0,10)\n", sep="") 
-    out <- paste(out, "  bsTau ~ dt(0,", prior.prec, ",3)T(0,10)\n", sep="") 
-    
+  if (pars$hp.tau.dist=="dunif") {
+    out <- paste(out, "  bsTau ~ dunif(", pars$hp.tau.min, ",", pars$hp.tau.max, ")\n", sep="") 
+  } else if (pars$hp.tau.dist=="dhalft") {
+    out <- paste(out, "  bsTau ~ dt(0,", hp.tau.prec, ",", pars$hp.tau.df, ")T(", pars$hp.tau.min, ",", pars$hp.tau.max, ")\n", sep="") 
   } else {
     stop("Specified prior not implemented")
   }
   
-  if (link == "logit") {
-    out <- paste(out, "  mu.tobs ~ dnorm(0.0,1.0E-6)\n", sep="")
+  if (pars$model.cstat  == "normal/logit") {
+    out <- paste(out, "  mu.tobs ~ dnorm(", pars$hp.mu.mean, ",", hp.mu.prec, ")\n", sep="")
     out <- paste(out, "  mu.obs <- 1/(1+exp(-mu.tobs))\n", sep="")
     out <- paste(out, "  pred.obs <- 1/(1+exp(-pred.tobs))\n", sep="")
     out <- paste(out, "  pred.tobs ~ dnorm(mu.tobs, bsprec)\n", sep="")
@@ -309,12 +389,12 @@ print.valmeta <- function(x, ...) {
     cat("Model results for the c-statistic:\n\n")
     print(x$cstat)
     if (x$cstat$num.estimated.var.c > 0)
-      cat(paste("\nNote: For ", x$cstat$num.estimated.var.c, " validation(s), the standard error was estimated using method '", x$cstat$method.restore.se, "'.\n", sep=""))
+      cat(paste("\nNote: For ", x$cstat$num.estimated.var.c, " validation(s), the standard error of the concordance statistic swas estimated using method '", x$cstat$method.restore.se, "'.\n", sep=""))
     
     if (!is.null(x$oe$results)) {
       cat("\n\n")
     }
-    }
+  }
   if (!is.null(x$oe$results)) {
     cat("Model results for the total O:E ratio:\n\n")
     print(x$oe)
@@ -328,7 +408,7 @@ print.vmasum <- function(x, ...) {
     cat(paste("\nPenalized expected deviance: ", round(x$PED,2), "\n"))
     
     # Check if model converged
-    psrf.ul <-  x$runjags$psrf$psrf[,"Upper C.I."]
+    psrf.ul <-  x$runjags$psrf$psrf[,2]
     psrf.target <- x$runjags$psrf$psrf.target
     
     if(sum(psrf.ul > psrf.target)>1) {
@@ -343,124 +423,14 @@ print.vmasum <- function(x, ...) {
 }
 
 plot.valmeta <- function(x, ...) {
-  inv.logit <- function(x) {1/(1+exp(-x)) }
-  
   if (!is.null(x$cstat)) {
-    if (!is.null(x$cstat$rma)) {
-      # Forest plot for the c-statistic
-      if (x$cstat$scale=="logit") {
-        forest(x$cstat$rma, transf=inv.logit, xlab="c-statistic", addcred=T, ...)
-      } else {
-        forest(x$cstat$rma, transf=NULL, xlab="c-statistic", addcred=T, ...)
-      }
-    } else {
-      col <- c("black", "gray50")
-      border <- "black"
-      lty <- c("solid", "dotted", "solid")
-      cex <- 0.8
-      efac <- 1
-      efac <- rep(efac, 2)
-      xlim <- c(-0.5, 1.5)
-      
-      par.usr <- par("usr")
-      height <- par.usr[4] - par.usr[3]
-      
-      k <- dim(x$cstat$data)[1]
-      slab <- c(x$cstat$slab, "RE Model")
-      yi <- x$cstat$data[,"theta"]
-      ci.lb <- x$cstat$data[,"theta.95CIl"]
-      ci.ub <- x$cstat$data[,"theta.95CIu"]
-      
-      if (x$cstat$scale=="logit") {
-        yi <- sapply(yi, inv.logit)
-        ci.lb <- sapply(ci.lb, inv.logit)
-        ci.ub <- sapply(ci.ub, inv.logit)
-      }
-      
-      #Add the meta-analysis summary to the results
-      #Note that no transormations are needed here, as summaries are always presented on original scale
-      b <- x$cstat$results["estimate"]
-      yi <- c(yi, b)
-      b.ci.lb <- x$cstat$results["95CIl"]
-      b.ci.ub <- x$cstat$results["95CIu"]
-      b.cr.lb <- x$cstat$results["95PIl"]
-      b.cr.ub <- x$cstat$results["95PIu"]
-      ci.lb <- c(ci.lb, b.ci.lb)
-      ci.ub <- c(ci.ub, b.ci.ub)
-      
-      
-      rows <- c(seq(k,1),-1)
-      
-      annotext <- round(cbind(yi, ci.lb, ci.ub), 2)
-      annotext <- matrix(apply(annotext, 2, format, nsmall = 2), ncol = 3)
-      annotext <- paste(annotext[,1], "[", annotext[,2], ",", annotext[,3], "]")
-      
-      
-      par.mar <- par("mar")
-      par.mar.adj <- par.mar - c(0, 3, 1, 1)
-      par.mar.adj[par.mar.adj < 0] <- 0
-      par(mar = par.mar.adj)
-      on.exit(par(mar = par.mar))
-      
-      par.usr <- par("usr")
-      height <- par.usr[4] - par.usr[3]
-      lheight <- strheight("O")
-      cex.adj <- ifelse(k * lheight > height * 0.8, height/(1.25 * k * lheight), 1)
-      cex <- par("cex") * cex.adj
-      
-      plot(NA, NA, xlim=xlim, ylim=c(-2,k), ylab="", xlab="c-statistic",yaxt = "n", xaxt = "n", xaxs = "i", bty = "n", ...)
-      for (i in 1:k) {
-        points(yi[i], rows[i], pch = 15, ...)
-        
-        segments(ci.lb[i], rows[i], ci.ub[i], rows[i], ...)
-        
-        segments(ci.lb[i], rows[i] - (height/150) * cex * 
-                   efac[1], ci.lb[i], rows[i] + (height/150) * cex * 
-                   efac[1], ...)
-        
-        segments(ci.ub[i], rows[i] - (height/150) * cex * 
-                   efac[1], ci.ub[i], rows[i] + (height/150) * cex * 
-                   efac[1], ...)
-      }
-      text(xlim[1], rows, slab, pos = 4, cex = cex, ...)
-      text(x = xlim[2], rows, labels = annotext, pos = 2, cex = cex, ...)
-      
-      # Add prediction interval
-      segments(b.cr.lb, -1, b.cr.ub, -1, lty = lty[2], col = col[2], ...)
-      segments(b.cr.lb, -1 - (height/150) * cex * efac[1], 
-               b.cr.lb, -1 + (height/150) * cex * efac[1], 
-               col = col[2], ...)
-      segments(b.cr.ub, -1 - (height/150) * cex * efac[1], 
-               b.cr.ub, -1 + (height/150) * cex * efac[1], 
-               col = col[2], ...)
-      
-      # Add diamond for summary estimate
-      polygon(x = c(b.ci.lb, b, b.ci.ub, b), y = c(-1, -1 + 
-                                                     (height/100) * cex * efac[2], -1, -1 - (height/100) * 
-                                                     cex * efac[2]), col = col[1], border = border, ...)
-      
-
-      
-      # Add separation line between forest plot and meta-analysis results
-      abline(h = 0, lty = 1, ...)
-
-      axis(side = 1, at = c(0,0.2,0.4,0.6,0.8,1), labels = c(0, 0.2, 0.4, 0.6, 0.8, 1), cex.axis = 1, ...)
-    }
+    plotForest(x$cstat, xlab="c-statistic", refline=NULL, ...)
     if (!is.null(x$oe)) {
       readline(prompt="Press [enter] to continue")
     }
   }
   if (!is.null(x$oe)) {
-    if (!is.null(x$oe$rma)) {
-      # Forest plot for the c-statistic
-      if (x$oe$scale=="log") {
-        forest(x$oe$rma, transf=exp, xlab="Total O:E ratio", addcred=T, refline=1, ...)
-      } else {
-        forest(x$oe$rma, transf=NULL, xlab="Total O:E ratio", addcred=T, refline=1, ...)
-      }
-    } else {
-      warning("Plot function not implemented yet for Bayesian MA")
-    }
+    plotForest(x$oe, xlab="O:E ratio", refline=1, ...)
   }
 }
 
