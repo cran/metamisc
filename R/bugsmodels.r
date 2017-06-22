@@ -1,5 +1,5 @@
 generateBugsOE <- function(extrapolate=F,
-                           pars) {
+                           pars,...) {
   hp.tau.prec <- 1/(pars$hp.tau.sigma**2)
   hp.mu.prec <- 1/pars$hp.mu.var
   

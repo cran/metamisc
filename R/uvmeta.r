@@ -1,11 +1,11 @@
 #Multivariate meta-analyse: http://blogs.sas.com/content/iml/2012/10/31/compute-the-log-determinant-of-a-matrix/ (directly take log-determinant)
 
 #TODO: allow data transformations
-uvmeta <- function(r, vars, model="random", method="MOM", labels, na.action,
+uvmeta <- function(r, r.se, method="REML", test="knha", labels, na.action,
                    pars, verbose=FALSE, ...) 
   UseMethod("uvmeta")
 
-uvmeta.default <- function(r, vars, model="random", method="MOM", labels, na.action, 
+uvmeta.default <- function(r, r.se, method="REML", test="knha", labels, na.action, 
                            pars, verbose=FALSE, ...)
 {
 
@@ -25,18 +25,20 @@ uvmeta.default <- function(r, vars, model="random", method="MOM", labels, na.act
     } 
   }
   
-  if (length(r)!=length(vars)) {
-    stop("The vectors 'r' and 'vars' have different lengths!")
+  if (length(r)!=length(r.se)) {
+    stop("The vectors 'r' and 'r.se' have different lengths!")
   }
   
-  ds <- as.data.frame(cbind(as.vector(r),as.vector(vars)))
-  colnames(ds) <- c("theta","v")
+  ds <- as.data.frame(cbind(as.vector(r),as.vector(r.se)))
+  colnames(ds) <- c("theta","theta.se")
   
   if (!missing(labels)) {
     if (length(labels) != length(r))
       stop("The vectors 'labels' and 'r' have different lengths!")
-    rownames(ds) = labels
-  } 
+  } else {
+    labels <- paste("Study",seq(1, length(r)))
+  }
+  rownames(ds) = labels
   
   if (missing(na.action)) 
     na.action <- "na.fail"
@@ -51,7 +53,11 @@ uvmeta.default <- function(r, vars, model="random", method="MOM", labels, na.act
   }
   
   quantiles <- c((1-pars.default$level)/2, 0.50, (1-((1-pars.default$level)/2)))
-  est <- NA 
+  
+  out <- list()
+  out$call <- match.call()
+  out$method <- method
+  class(out) <- "uvmeta"
   
   #############################################################################
   # Start analyses
@@ -64,105 +70,26 @@ uvmeta.default <- function(r, vars, model="random", method="MOM", labels, na.act
   }
   
   
-  if (method == "MOM") { 
-    results <- as.data.frame(array(NA,dim=c(4, 5)))
-    colnames(results) <- c("Estimate","Var",paste(quantiles*100,"%",sep=""))
-    rownames(results) <- c("mu","tausq","Q","Isq")
+  if (method != "BAYES") { 
+    fit <- rma(yi=r, sei=r.se, method=method, test=test, slab=labels, ...) 
+    preds <- predict(fit)
+    cr.lb <- ifelse(method=="FE", NA, preds$cr.lb)
+    cr.ub <- ifelse(method=="FE", NA, preds$cr.ub)
+    results <- c(coefficients(fit), sqrt(vcov(fit)), fit$tau2, fit$se.tau2, c(preds$ci.lb, preds$ci.ub, cr.lb, cr.ub))
+    names(results) <- c("estimate", "SE", "tau2", "se.tau2", "95CIl", "95CIu", "95PIl", "95PIu")
     
-    # FIXED EFFECTS MODEL
-    w <- 1/ds$v
-    weighted_Tbar <- sum(ds$theta*w)/sum(w)
-    var_T <- 1/sum(w)
-    se_T <- sqrt(var_T)
-    Q <- sum(w*(ds$theta-weighted_Tbar)**2)
-    results["Q",] <- c(Q,NA,rep(NA,length(quantiles)))
-  
-    # RANDOM EFFECTS MODEL
-    # Between-study variance
-    between_study_var <- 0
-    if (model=="random" & Q > dfr) {
-      re_C <-  sum(w) - sum(w**2)/sum(w)
-      between_study_var <- (Q - dfr)/re_C
-    }
-
-    re_v <- vars + between_study_var # Within-study plus between-study variance
-    re_w <- 1/re_v # Updated weights
-    re_weighted_Tbar <- sum(ds$theta*re_w)/sum(re_w) # Combined effect
-    re_var_T  <- 1/sum(re_w)     # Variance of the combined effect   
-    re_se_T <- sqrt(re_var_T)     # Standard error of combined effect
+    out$rma <- fit
+    out$numstudies <- fit$k
+    out$results <- results
     
-    if (model=="random") {
-      results["mu",] <- c(re_weighted_Tbar,re_var_T,re_weighted_Tbar+qnorm(quantiles)*sqrt(re_var_T))
-      results["tausq",] <- c(between_study_var,NA,rep(NA,3))
-      
-      # Calculate I2 and its confidence limits
-      Isq <- (results["Q",]-dfr)/results["Q",]
-      Isq[which(Isq>1)] <- 1
-      Isq[which(Isq<0)] <- 0
-      results["Isq",] <- Isq
-    } else if (model=="fixed") {
-      results["mu",] <- c(weighted_Tbar,var_T,weighted_Tbar+qnorm(quantiles)*sqrt(var_T))
-      results["tausq",] <- c(0,0,rep(0,3))
-    }
-    pred.int <- results["mu","Estimate"] + qt(quantiles,df=(numstudies-2))*sqrt(results["tausq","Estimate"]+results["mu","Var"])
-    names(pred.int) <- paste(quantiles*100,"%",sep="")
-    
-    est <- list(results=results, model=model,df=dfr,numstudies=numstudies, pred.int=pred.int)
-    
-  } else if (method=="ml") {
-    results <- as.data.frame(array(NA,dim=c(4, length(quantiles)+2)))
-    colnames(results) <- c("Estimate","Var",paste(quantiles*100,"%",sep=""))
-    rownames(results) <- c("mu","tausq","Q","Isq")
-    
-    #mle.loglik <- function( theta, tausq, ds) {
-    #  loglik <- -0.5*sum(log(2*pi*(ds$v+tausq)))-0.5*sum(((ds$theta-theta)**2)/(ds$v+tausq))
-    #  return (-loglik) #return negative log-likelihood
-    #}
-    mle.loglik.random <- function(theta, tausq, ds) { #random effects
-          loglik <- sum(dnorm(x=ds$theta,mean=theta, sd=sqrt(tausq+ds$v),log=T))
-          return (-loglik)
-    }
-    mle.loglik.fixed <- function(theta, ds) { #fixed effects
-      loglik <- sum(dnorm(x=ds$theta,mean=theta, sd=sqrt(ds$v),log=T))
-      return (-loglik)
-    }
-    
-    # first apply fixed-effects analysis
-    mle.fixed <- mle2(minuslogl=mle.loglik.fixed,start=list(theta=0),data=list(ds=ds))
-    Q <- sum((ds$theta-coef(mle.fixed)["theta"])**2/ds$v) #use theta of the fixed-effects analysis
-    results["Q",] <- c(Q,NA,rep(NA,length(quantiles)))
-    
-    if (model=="random") {
-      mle.random <- mle2(minuslogl=mle.loglik.random,start=list(theta=0, tausq=0),data=list(ds=ds),method="L-BFGS-B",lower=list(theta=-Inf,tausq=0))
-      
-      results["mu",] <- c(coef(mle.random)["theta"],diag(vcov(mle.random))["theta"],coef(mle.random)["theta"]+qt(quantiles,df=(numstudies-1))*sqrt(diag(vcov(mle.random))["theta"]))
-      results["tausq",] <- c(coef(mle.random)["tausq"],diag(vcov(mle.random))["tausq"],rep(NA,length(quantiles)))
-    
-      # Calculate I2 
-      Isq <- (results["Q",]-dfr)/results["Q",]
-      Isq[which(Isq>1)] <- 1
-      Isq[which(Isq<0)] <- 0
-      results["Isq",] = Isq
-      loglik = -attr(mle.random,"min")
-    } else {
-      results["mu",] <- c(coef(mle.fixed)["theta"],diag(vcov(mle.fixed))["theta"],coef(mle.fixed)["theta"]+qnorm(quantiles)*sqrt(diag(vcov(mle.fixed))["theta"]))
-      results["tausq",] <- c(0,0,rep(0,length(quantiles)))
-      loglik <- -attr(mle.fixed,"min")
-    }
-    pred.int <- results["mu","Estimate"] + qt(quantiles,df=(numstudies-2))*sqrt(results["tausq","Estimate"]+results["mu","Var"])
-    names(pred.int) <- paste(quantiles*100,"%",sep="")    
-    est <- list(results=results, model=model,df=dfr,numstudies=numstudies, pred.int=pred.int, loglik=loglik)
-  } else if (method == "reml") {
-    stop("REML not implemented yet")
-  }
-  else if (method == "BAYES") { 
+  } else if (method == "BAYES") { 
     results.overview <- as.data.frame(array(NA,dim=c(2, length(quantiles)+2)))
     colnames(results.overview) <- c("Estimate","Var",paste(quantiles*100,"%",sep=""))
     rownames(results.overview) <- c("mu", "tausq")
     
     modelfile <- system.file(package="metamisc", "model", "uvmeta_ranef.bug")
     uvmeta_dat <- list('r' = ds$theta,
-                       'vars' = ds$v,
+                       'vars' = ds$theta.se**2,
                        'k' = numstudies,
                        'hp.mu.mean' = pars.default$hp.mu.mean,
                        'hp.mu.prec' = 1/pars.default$hp.mu.var)
@@ -178,44 +105,29 @@ uvmeta.default <- function(r, vars, model="random", method="MOM", labels, na.act
                                     silent.jags = !verbose,
                                     inits=inits,
                                     ...)
-    results <- jags.model$summaries
+    fit <- jags.model$summaries
     
     #Extract PED
     fit.dev <- runjags::extract(jags.model,"PED")
     
-    #Update 'mu' and 'tausq'
-    results.overview[c("mu","tausq"),1] <- results[c("mu","tausq"),"Mean"]
-    results.overview[c("mu","tausq"),2] <- results[c("mu","tausq"),"SD"]**2
-    results.overview[c("mu","tausq"),3] <- results[c("mu","tausq"),"Lower95"]
-    results.overview[c("mu","tausq"),4] <- results[c("mu","tausq"),"Median"]
-    results.overview[c("mu","tausq"),5] <- results[c("mu","tausq"),"Upper95"]
-    
-    # Calculate prediction interval
-    pred.int <- results["theta.new",c("Lower95", "Median", "Upper95")]
-    names(pred.int) <- c("2.5%" , "50%", "97.5%")
-    
-    # Calculate deviance
-    popt <-  sum(fit.dev$deviance)+sum(fit.dev$penalty) #pD + sum(m.deviance$penalty) #penalized expected deviance
+    results <- c(fit["mu",c("Mean","SD")], fit["tausq",c("Mean","SD")], fit["mu", c("Lower95", "Upper95")], fit["theta.new", c("Lower95", "Upper95")])
+    names(results) <- c("estimate", "SE", "tau2", "se.tau2", "95CIl", "95CIu", "95PIl", "95PIu")
 
-    est <- list(results=results.overview, model="random", df=dfr, numstudies=numstudies, pred.int=pred.int, popt=popt, runjags=jags.model)
-
-  
-    
+    out$runjags <- jags.model
+    out$PED <- sum(fit.dev$deviance)+sum(fit.dev$penalty)
+    out$results <- results
   }
-  attr(est$results,"level") <- pars.default$level
-  est$data <- ds
-  est$na.action <- na.action
-  est$method <- method
-  est$call <- match.call()
-  class(est) <- "uvmeta"
-  return(est)
+  #attr(out$results,"level") <- pars.default$level
+  out$data <- ds
+  out$na.action <- na.action
+  return(out)
 }
 
 plot.uvmeta <- function(x, ...) {
-  level <- attr(x$results,"level")
+  level <- 0.95 #attr(x$results,"level")
   quantiles <- c((1-level)/2, (1-((1-level)/2)))
 
-  ci <- x$data[,"theta"]+t(qnorm(quantiles)*matrix(rep(sqrt(x$data[,"v"]),length(quantiles)),nrow=(length(quantiles)), ncol=dim(x$data)[1],byrow=T))
+  ci <- x$data[,"theta"]+t(qnorm(quantiles)*matrix(rep(x$data[,"theta.se"],length(quantiles)),nrow=(length(quantiles)), ncol=dim(x$data)[1],byrow=T))
   
   xlim <- c(min(ci),max(ci))
   ylim <- c(2,(x$numstudies+5))
@@ -237,14 +149,14 @@ plot.uvmeta <- function(x, ...) {
       lines(c(ci[i,j],ci[i,j]),c((yloc-0.1),(yloc+0.1)),pch=3)
   }
   
-  ci.bounds <- x$results["mu",paste(quantiles*100,"%", sep="")]
-  lines(rep(x$results["mu","Estimate"],2), c(2.9,3.1),pch=3)
+  ci.bounds <- x$results[c("95CIl", "95CIu")]
+  lines(rep(x$results["estimate"],2), c(2.9,3.1),pch=3)
   lines(c(min(ci.bounds),max(ci.bounds)),c(3,3))
-  points(x$results["mu","Estimate"],3,pch=23,bg="white")
+  points(x$results["estimate"],3,pch=23,bg="white")
   
   #Add prediction interval
-  if (x$model == "random") {
-    pi.bounds <- x$pred.int[paste(quantiles*100,"%", sep="")]
+  if (x$method != "FE") {
+    pi.bounds <- x$results[c("95PIl", "95PIu")]
     lines(c(min(pi.bounds),min(ci.bounds)),c(3,3), lty=2)
     lines(c(max(ci.bounds),max(pi.bounds)),c(3,3), lty=2)
     lines(c(min(ci.bounds),min(ci.bounds)),c((3-0.2),(3+0.2)),pch=3)
@@ -260,19 +172,17 @@ plot.uvmeta <- function(x, ...) {
 
 print.uvmeta <- function(x, ...)
 {
-  out <- (x$results)
-  text.model <- if (x$model=="fixed") "Fixed" else "Random"
+  out <- (x$results)[c("estimate", "95CIl", "95CIu")]
+  text.model <- if (x$method=="FE") "Fixed" else "Random"
   text.method <- if(x$method=="BAYES") "credibility" else "confidence"
   cat(paste(text.model,"effects estimates with corresponding", text.method, "intervals:\n\n"))
 	print(out)
-  if (x$model=="random") {
+  if (x$method!="FE") {
     cat(paste("\n\nPrediction interval for mu:\n\n"))
-    print(x$pred.int)
+    print((x$results)[c("estimate", "95PIl", "95PIu")])
   }
-  if(x$method=="ml") { #display MLE
-    cat(paste("\nLog-likelihood: ", round(x$loglik,2),"\n"))
-  } else if (x$method=="BAYES") {
-    cat(paste("\nPenalized expected deviance: ", round(x$popt,3),"\n"))
+  if (x$method=="BAYES") {
+    cat(paste("\nPenalized expected deviance: ", round(x$PED,3),"\n"))
     
     # Check if model converged
     psrf.ul <-  x$runjags$psrf$psrf[,"Upper C.I."]
@@ -295,14 +205,11 @@ summary.uvmeta <- function(object, ...)
 {
     cat("Call:\n")
     print(object$call)
-    if (object$model=="fixed")  cat(paste("\nFixed effects summary:\t",round(object$results["mu","Estimate"],5))," (SE: ",round(sqrt(object$results["mu","Var"]),5), ")",sep="")
-    if (object$model=="random") {
-        cat(paste("\nRandom effects summary:\t",round(object$results["mu","Estimate"],5))," (SE: ",round(sqrt(object$results["mu","Var"]),5), ")",sep="")
-        cat(paste("\n\nTau squared: \t\t",round(object$results["tausq","Estimate"],5),sep=""))
+    if (object$method=="FE")  cat(paste("\nFixed effects summary:\t",round(object$results["estimate"],5))," (SE: ",round(object$results["SE"],5), ")",sep="")
+    if (object$method!="FE") {
+        cat(paste("\nRandom effects summary:\t",round(object$results["estimate"],5))," (SE: ",round(object$results["SE"],5), ")",sep="")
+        cat(paste("\nTau squared: \t\t",round(object$results["tau2"],5))," (SE: ",round(object$results["se.tau2"],5), ")",sep="")
     }
-    Q_p = 1-pchisq(object$results["Q","Estimate"],df=object$df)
-    cat(paste("\nCochran's Q statistic: \t",round(object$results["Q","Estimate"],5)," (p-value: ",round(Q_p,5),")",sep=""))
-    cat(paste("\nI-square index: \t", round(object$results["Isq","Estimate"]*100,3)," %\n",sep=""))
 }
 
 

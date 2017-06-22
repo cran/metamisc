@@ -1,4 +1,4 @@
-logit <- function(x) { if(is.numeric(x))  log(x/(1-x)) else stop("x is not numeric!") }
+logit <- function(x) {  log(x/(1-x))  }
 
 inv.logit <- function(x) {  if(is.numeric(x)) 1/(1+exp(-x)) else stop("x is not numeric!") }
 
@@ -60,26 +60,34 @@ extrapolateOE <- function(Po, Pe, var.Po, t.val, t.ma, N, model="normal/log") {
   Pe.new <- 1-exp(t.ma*log(1-Pe)/t.val)
   theta <- theta.var <- NA
   
+  if (missing(var.Po)) {
+    var.Po <- rep(NA, length(Po))
+  }
+  
   if (model=="normal/identity") {
     theta <- Po.new/Pe.new
     
-    if (missing(var.Po)) {
-      # Approximate SE of Kaplan-Meier using binomial distribution
-      theta.var <- ((t.ma**2)*exp(2*t.ma*log(1-Po)/t.val)*Po)/((t.val**2)*N*(1-Po)*(1-exp(t.ma*log(1-Pe)/t.val))**2)
-    } else {
-      # Use error variance of Po, which is equal to the error variance of the KM estimate
-      theta.var <- ((t.ma**2)*exp(2*t.ma*log(1-Po)/t.val)*var.Po)/((t.val**2)*((1-Po)**2)*(1-exp(t.ma*log(1-Pe)/t.val))**2)
-    }
+    # Approximate SE of Kaplan-Meier using binomial distribution
+    theta.var.approx1 <- ((t.ma**2)*exp(2*t.ma*log(1-Po)/t.val)*Po)/((t.val**2)*N*(1-Po)*(1-exp(t.ma*log(1-Pe)/t.val))**2)
+    
+    # Use error variance of Po, which is equal to the error variance of the KM estimate
+    theta.var.approx2 <- ((t.ma**2)*exp(2*t.ma*log(1-Po)/t.val)*var.Po)/((t.val**2)*((1-Po)**2)*(1-exp(t.ma*log(1-Pe)/t.val))**2)
+    
+    
+    theta.var[is.na(var.Po)] <- theta.var.approx1[is.na(var.Po)]
+    theta.var[!is.na(var.Po)] <- theta.var.approx2[!is.na(var.Po)]
+    
   } else if (model=="normal/log" | model=="poisson/log") {
     theta <- log(Po.new/Pe.new)
     
-    if (missing(var.Po)) {
-      # Approximate SE of Kaplan-Meier using binomial distribution
-      theta.var <- ((t.ma**2)*Po*exp(2*t.ma*log(1-Po)/t.val))/((t.val**2)*N*(1-Po)*((1-exp(t.ma*log(1-Po)/t.val))**2))
-    } else {
-      # Use error variance of Po, which is equal to the error variance of the KM estimate
-      theta.var <- ((t.ma**2)*exp(2*t.ma*log(1-Po)/t.val)*var.Po)/((t.val**2)*((1-Po)**2)*((1-exp(t.ma*log(1-Po)/t.val))**2))
-    }
+    # Approximate SE of Kaplan-Meier using binomial distribution
+    theta.var.approx1 <- ((t.ma**2)*Po*exp(2*t.ma*log(1-Po)/t.val))/((t.val**2)*N*(1-Po)*((1-exp(t.ma*log(1-Po)/t.val))**2))
+    
+    # Use error variance of Po, which is equal to the error variance of the KM estimate
+    theta.var.approx2 <- ((t.ma**2)*exp(2*t.ma*log(1-Po)/t.val)*var.Po)/((t.val**2)*((1-Po)**2)*((1-exp(t.ma*log(1-Po)/t.val))**2))
+
+    theta.var[is.na(var.Po)] <- theta.var.approx1[is.na(var.Po)]
+    theta.var[!is.na(var.Po)] <- theta.var.approx2[!is.na(var.Po)]
   } else {
     stop ("Scale not implemented")
   }
@@ -88,7 +96,7 @@ extrapolateOE <- function(Po, Pe, var.Po, t.val, t.ma, N, model="normal/log") {
 }
 
 generateOEdata <- function(O, E, Po, Po.se, Pe, OE, OE.se, OE.95CI, citl, citl.se, N, 
-                           t.ma, t.val, pars) {
+                           t.ma, t.val, t.extrapolate, pars, verbose) {
   cc.add <- 0.5
   
   # Derive O or E from OE where possible
@@ -96,10 +104,7 @@ generateOEdata <- function(O, E, Po, Po.se, Pe, OE, OE.se, OE.95CI, citl, citl.s
   O <- ifelse(is.na(O), Po*N, O)
   E <- ifelse(is.na(E), O/OE, E)
   E <- ifelse(is.na(E), Pe*N, E)
-  Po <- ifelse(is.na(Po), O/N, Po)
-  Po <- ifelse(is.na(Po), OE*Pe, Po)
-  Pe <- ifelse(is.na(Pe), E/N, Pe)
-  Pe <- ifelse(is.na(Pe), Po/OE, Pe)
+
   
   # Apply necessary data transformations
   if (pars$model.oe == "normal/identity") {
@@ -109,9 +114,10 @@ generateOEdata <- function(O, E, Po, Po.se, Pe, OE, OE.se, OE.95CI, citl, citl.s
     E[cc] <- E[cc]+cc.add
     N[cc] <- N[cc]+cc.add
     O[cc] <- O[cc]+cc.add
-    OE[cc] <- O[cc]/E[cc]
-    Po <- O/N
-    Pe <- E/N
+    Po <- ifelse(is.na(Po), O/N, Po)
+    Po <- ifelse(is.na(Po), OE*Pe, Po)
+    Pe <- ifelse(is.na(Pe), E/N, Pe)
+    Pe <- ifelse(is.na(Pe), Po/OE, Pe)
     
     theta <- OE
     theta <- ifelse(is.na(theta), O/E, theta)
@@ -127,11 +133,17 @@ generateOEdata <- function(O, E, Po, Po.se, Pe, OE, OE.se, OE.95CI, citl, citl.s
     theta.var <- ifelse(is.na(theta.var), (((O/N)**2)+1)*((exp(citl))**2)*(citl.se**2), theta.var)
     
     #Extrapolate theta 
-    if (!is.na(t.ma) & !is.na(t.val)) {
+    if (t.extrapolate & !is.na(t.ma) & class(t.val)=="numeric") {
+      if(verbose) message("Extrapolating estimates of the total O:E ratio ...")
       ep <- which(t.val!=t.ma)
       thetaE <- extrapolateOE(Po=Po, Pe=Pe, var.Po=(Po.se**2), t.val=t.val, t.ma=t.ma, N=N, model=pars$model.oe)
       theta[ep] <- thetaE[ep,"theta"]
       theta.var[ep] <- thetaE[ep,"theta.var"]
+      t.val[ep] <- t.ma
+    } else if (!t.extrapolate & !is.na(t.ma) & class(t.val)=="numeric") {
+      if(verbose) message("Omitting studies with improper follow-up times ...")
+      theta[t.val!=t.ma] <- NA
+      theta.var[t.val!=t.ma] <- NA
     }
   } else if (pars$model.oe == "normal/log" | pars$model.oe == "poisson/log") {
     
@@ -145,9 +157,10 @@ generateOEdata <- function(O, E, Po, Po.se, Pe, OE, OE.se, OE.95CI, citl, citl.s
     E[cc] <- cc.add
     N[cc] <- N[cc]+cc.add
     O[cc] <- O[cc]+cc.add
-    OE[cc] <- O[cc]/E[cc]
-    Po <- O/N
-    Pe <- E/N
+    Po <- ifelse(is.na(Po), O/N, Po)
+    Po <- ifelse(is.na(Po), OE*Pe, Po)
+    Pe <- ifelse(is.na(Pe), E/N, Pe)
+    Pe <- ifelse(is.na(Pe), Po/OE, Pe)
     
     theta <- log(OE)
     theta <- ifelse(is.na(theta), log(O/E), theta)
@@ -163,11 +176,17 @@ generateOEdata <- function(O, E, Po, Po.se, Pe, OE, OE.se, OE.95CI, citl, citl.s
     theta.var <- ifelse(is.na(theta.var),  restore.oe.var(citl=citl, citl.se=citl.se, Po=Po), theta.var) #CITL
     
     #Extrapolate theta 
-    if (!is.na(t.ma) & !is.na(t.val)) {
+    if (t.extrapolate & !is.na(t.ma) & class(t.val)=="numeric") {
+      if(verbose) message("Extrapolating estimates of the total O:E ratio ...")
       ep <- which(t.val!=t.ma)
       thetaE <- extrapolateOE(Po=Po, Pe=Pe, var.Po=(Po.se**2), t.val=t.val, t.ma=t.ma, N=N, model=pars$model.oe)
       theta[ep] <- thetaE[ep,"theta"]
       theta.var[ep] <- thetaE[ep,"theta.var"]
+      t.val[ep] <- t.ma
+    } else if (!t.extrapolate & !is.na(t.ma) & class(t.val)=="numeric") {
+      if(verbose)message("Omitting studies with improper follow-up times ...")
+      theta[t.val!=t.ma] <- NA
+      theta.var[t.val!=t.ma] <- NA
     }
   } else {
     stop(paste("No appropriate meta-analysis model defined: '", pars$model.oe, "'", sep=""))
@@ -177,8 +196,8 @@ generateOEdata <- function(O, E, Po, Po.se, Pe, OE, OE.se, OE.95CI, citl, citl.s
   theta.cil[is.na(theta.cil)] <- (theta+qnorm(0.025)*sqrt(theta.var))[is.na(theta.cil)]
   theta.ciu[is.na(theta.ciu)] <- (theta+qnorm(0.975)*sqrt(theta.var))[is.na(theta.ciu)]
   
-  ds <- cbind(theta, sqrt(theta.var), theta.cil, theta.ciu, F)
-  colnames(ds) <- c("theta", "theta.se", "theta.95CIl", "theta.95CIu", "cont.corr")
+  ds <- cbind(theta, sqrt(theta.var), theta.cil, theta.ciu, t.val, F)
+  colnames(ds) <- c("theta", "theta.se", "theta.95CIl", "theta.95CIu", "t.val", "cont.corr")
   ds[cc,"cont.corr"] <- T
   ds <- as.data.frame(ds)
   

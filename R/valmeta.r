@@ -1,6 +1,6 @@
-valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.se, OE.95CI, citl, citl.se,
-                    N, O, E, Po, Po.se, Pe, t.val, t.ma, method="REML", knha=TRUE, verbose=FALSE, 
-                    slab, n.chains = 4, pars, ...) {
+valmeta <- function(measure="cstat", cstat, cstat.se, cstat.95CI, OE, OE.se, OE.95CI, citl, citl.se,
+                    N, O, E, Po, Po.se, Pe, t.val, t.ma, t.extrapolate=FALSE, method="REML", test="knha", 
+                    verbose=FALSE, slab, n.chains = 4, pars, ...) {
   pars.default <- list(hp.mu.mean = 0, 
                        hp.mu.var = 1E6,
                        hp.tau.min = 0,
@@ -19,34 +19,12 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.se, OE.95CI, citl, citl.
     }
   }
   
+  if (!is.element(measure, c("cstat","OE")))
+    stop("Unknown 'measure' specified.")
   
-  out <- list()
-  out$call <- match.call()
-  out$method <- method
-  class(out) <- "valmeta"
-  
-  N.studies.OE <- 0
-  if (!missing(OE)) {
-    N.studies.OE <- length(OE)
-  } else if (!missing(E)) {
-    N.studies.OE <- length(E)
-  } else if (!missing(Pe)) {
-    N.studies.OE <- length(Pe)
-  }else if (!missing(citl)) {
-    N.studies.OE <- length(citl)
-  }
-  
-  t.ma <- ifelse(missing(t.ma), NA, t.ma)
-  t.val <- ifelse(missing(t.val), NA, t.val)
-  
-  #make sure knha is only used for random effec models
-  knha <- ifelse(method=="FE", F, knha)
-  
-
-  inv.logit <- function(x) {  if(is.numeric(x)) 1/(1+exp(-x)) else stop("x is not numeric!") }
-  logit <- function(x) { log(x/(1-x)) }
-  
+  #######################################################################################
   # Check if we need to load runjags
+  #######################################################################################
   if (method=="BAYES") {
     if (!requireNamespace("runjags", quietly = TRUE)) {
       stop("The package 'runjags' is currently not installed!")
@@ -55,68 +33,128 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.se, OE.95CI, citl, citl.
       stop("The package 'rjags' is currently not installed!")
     } 
   }
-  
-  if(!missing(cstat)) {
-    if (missing(cstat.se) & missing(cstat.95CI)) {
-      stop("No sampling error was provided for the c-statistic!")
+    
+  #######################################################################################
+  # Count number of studies
+  #######################################################################################
+  k <- 0
+  if (measure=="cstat") {
+    if (!missing(cstat)) {
+      k <- length(cstat)
+    } else if (!missing(cstat.se)) {
+      k <- length(cstat.se)
+    } else if (!missing(cstat.95CI)) {
+      k <- dim(cstat.95CI)[2]
     }
+  } else if (measure=="OE") {
+    if (!missing(OE)) {
+      k <- length(OE)
+    } else if (!missing(E)) {
+      k <- length(E)
+    } else if (!missing(Pe)) {
+      k <- length(Pe)
+    } else if (!missing(citl)) {
+      k <- length(citl)
+    }
+  }
+  
+  #######################################################################################
+  # Prepare data
+  #######################################################################################
+  if (missing(O)) {
+    O <- rep(NA, length=k)
+  }
+  if (missing(Po)) {
+    Po <- rep(NA, length=k)
+  }
+  if (missing(N)) {
+    N <- rep(NA, length=k)
+  }
+  
+  theta.var.source <- rep("-", k)
+  
+  #######################################################################################
+  # Prepare object
+  #######################################################################################
+  out <- list()
+  out$call <- match.call()
+  out$measure <- measure
+  out$method <- method
+  class(out) <- "valmeta"
+  
+  
+  #######################################################################################
+  # Assign study labels
+  #######################################################################################
+  if(missing(slab)) {
+    out$slab <- paste("Study",seq(1, k))
+  } else {
+    out$slab <- as.character(slab)
+  }
+  
+
+  #######################################################################################
+  # Meta-analysis of the c-statistic
+  #######################################################################################
+  if (measure=="cstat") {
     if (missing(cstat.95CI)) {
-      cstat.95CI <- array(NA, dim=c(length(cstat),2))
+      cstat.95CI <- array(NA, dim=c(k,2))
     }
     if (is.null(dim(cstat.95CI))) {
       warning("Invalid dimension for 'cstat.95CI', argument ignored.")
-      cstat.95CI <- array(NA, dim=c(length(cstat),2))
+      cstat.95CI <- array(NA, dim=c(k,2))
     }
-    if (dim(cstat.95CI)[2] != 2 | dim(cstat.95CI)[1] != length(cstat)) {
+    if (dim(cstat.95CI)[2] != 2 | dim(cstat.95CI)[1] != k) {
       warning("Invalid dimension for 'cstat.95CI', argument ignored.")
-      cstat.95CI <- array(NA, dim=c(length(cstat),2))
+      cstat.95CI <- array(NA, dim=c(k,2))
     }
     if (missing(cstat.se)) {
-      cstat.se <- array(NA, dim=length(cstat))
+      cstat.se <- array(NA, dim=k)
     }
+
+    out$model <- pars.default$model.cstat
     
-    out$cstat <- list()
-    out$cstat$method.restore.se <- pars.default$method.restore.c.se 
-    out$cstat$model <- pars.default$model.cstat
-    class(out$cstat) <- "vmasum"
+    if (verbose) message("Extracting/computing estimates of the concordance statistic ...")
     
-    if(missing(slab)) {
-      out$cstat$slab <- paste("Study",seq(1, length(cstat)))
-    } else {
-      out$cstat$slab <- slab
-    }
+    
     
     # Apply necessary data transformations
     if (pars.default$model.cstat == "normal/identity") {
       theta <- cstat
       theta.var <- (cstat.se)**2
+      theta.var.source[!is.na(theta.var)] <- "Standard Error"
       theta.cil <- cstat.95CI[,1]
       theta.ciu <- cstat.95CI[,2]
       theta.var.CI <- ((theta.ciu - theta.cil)/(2*qnorm(0.975)))**2 #Derive from 95% CI
+      theta.var.source[is.na(theta.var) & !is.na(theta.var.CI)] <- "Confidence Interval"
       theta.var <- ifelse(is.na(theta.var), theta.var.CI, theta.var) #Prioritize reported SE
     } else if (pars.default$model.cstat == "normal/logit") {
       theta <- log(cstat/(1-cstat))
       theta.var <- (cstat.se/(cstat*(1-cstat)))**2
+      theta.var.source[!is.na(theta.var)] <- "Standard Error"
       theta.cil <- logit(cstat.95CI[,1])
       theta.ciu <- logit(cstat.95CI[,2])
       theta.var.CI <- ((theta.ciu - theta.cil)/(2*qnorm(0.975)))**2
+      theta.var.source[is.na(theta.var) & !is.na(theta.var.CI)] <- "Confidence Interval"
       theta.var <- ifelse(is.na(theta.var.CI), theta.var, theta.var.CI) #Prioritize variance from 95% CI
     } else {
       stop(paste("No appropriate meta-analysis model defined: '", pars.default$model.cstat, "'", sep=""))
     }
     
-    num.estimated.var.c <- 0
-    
     # Restore missing standard errors
     if (NA %in% theta.var) {
+      
+      # Calculate O and N from other information if possible
+      O <- ifelse(is.na(O), Po*N, O)
+      N <- ifelse(is.na(N), O/Po, N)
+
       # Restore missing estimates of the standard error of the c-statistic using information on c, N and O
-      if (!missing(O) & !missing(N)) {
-        if (verbose) cat("Attempting to restore missing information on the standard error of the c-statistic\n")
-        theta.var.hat <- restore.c.var(cstat=cstat, N.subjects=N, N.events=O, 
-                                       restore.method=pars.default$method.restore.c.se, model=pars.default$model.cstat)
-        num.estimated.var.c <- length(which(is.na(theta.var) & !is.na(theta.var.hat)))
-        theta.var <- ifelse(is.na(theta.var), theta.var.hat, theta.var)
-      }
+      theta.var.hat <- restore.c.var(cstat=cstat, N.subjects=N, N.events=O, 
+                                     restore.method=pars.default$method.restore.c.se, 
+                                     model=pars.default$model.cstat)
+      theta.var.source[is.na(theta.var) & !is.na(theta.var.hat)] <- pars.default$method.restore.c.se
+      theta.var <- ifelse(is.na(theta.var), theta.var.hat, theta.var)
+
       # Replace remaining missing values in theta.var by very large values
       theta.var <- ifelse(is.na(theta.var), 10e6, theta.var)
     }
@@ -125,17 +163,18 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.se, OE.95CI, citl, citl.
     theta.cil[is.na(theta.cil)] <- (theta+qnorm(0.025)*sqrt(theta.var))[is.na(theta.cil)]
     theta.ciu[is.na(theta.ciu)] <- (theta+qnorm(0.975)*sqrt(theta.var))[is.na(theta.ciu)]
     
-
-    ds <- cbind(theta, sqrt(theta.var), theta.cil, theta.ciu)
-    colnames(ds) <- c("theta", "theta.se", "theta.95CIl", "theta.95CIu")
-    out$cstat$data <- ds
-    out$cstat$num.estimated.var.c <- num.estimated.var.c
+    
+    ds <- cbind(theta, sqrt(theta.var), theta.cil, theta.ciu, NA)
+    colnames(ds) <- c("theta", "theta.se", "theta.95CIl", "theta.95CIu", "theta.blup")
+    
     
     if (method != "BAYES") { # Use of rma
       
       # Apply the meta-analysis
-      fit <- rma(yi=theta, vi=theta.var, data=ds, method=method, knha=knha, slab=out$cstat$slab, ...) 
+      fit <- rma(yi=theta, vi=theta.var, data=ds, method=method, test=test, slab=out$cstat$slab, ...) 
       preds <- predict(fit)
+      
+      ds[, "theta.blup"] <- blup(fit)$pred
       
       results <- as.data.frame(array(NA, dim=c(1,5)))
       if (pars.default$model.cstat == "normal/logit") {
@@ -151,9 +190,13 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.se, OE.95CI, citl, citl.
       }
       names(results) <- c("estimate", "95CIl", "95CIu", "95PIl", "95PIu")
       
-      out$cstat$rma <- fit
-      out$cstat$results <- results
+      out$rma <- fit
+      out$numstudies <- fit$k
+      out$results <- results
     } else {
+      # All data are used!
+      out$numstudies <- dim(ds)[1]
+      
       # Perform a Bayesian meta-analysis
       model <- .generateBugsCstat(pars=pars.default, ...)
       
@@ -167,12 +210,12 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.se, OE.95CI, citl, citl.
                          theta.var = theta.var,
                          Nstudies = length(theta))
       jags.model <- runjags::run.jags(model=model, 
-                             monitor = c("mu.tobs", "mu.obs", "pred.obs", "bsTau", "PED"), 
-                             data = mvmeta_dat, 
-                             n.chains = n.chains,
-                             silent.jags = !verbose,
-                             inits=inits,
-                             ...)
+                                      monitor = c("mu.tobs", "mu.obs", "pred.obs", "bsTau", "PED"), 
+                                      data = mvmeta_dat, 
+                                      n.chains = n.chains,
+                                      silent.jags = !verbose,
+                                      inits=inits,
+                                      ...)
       fit <- jags.model$summaries
       
       
@@ -182,54 +225,55 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.se, OE.95CI, citl, citl.
       results <- c(fit["mu.obs","Mean"], fit["mu.obs", c("Lower95", "Upper95")], fit["pred.obs", c("Lower95", "Upper95")])
       names(results) <- c("estimate", "95CIl", "95CIu", "95PIl", "95PIu")
       
-      out$cstat$runjags <- jags.model
-      out$cstat$PED <- sum(fit.dev$deviance)+sum(fit.dev$penalty)
-      out$cstat$results <- results
+      out$runjags <- jags.model
+      out$PED <- sum(fit.dev$deviance)+sum(fit.dev$penalty)
+      out$results <- results
     }
+    
+    out$data <- ds
+    out$se.source <- theta.var.source
+    return(out)
   }
-  
-  ##### Prepare data for OE ratio
-  if(N.studies.OE > 0) {
-    if (missing(N)) {
-      N <- rep(NA, length=N.studies.OE)
-    }
-    if (missing(O)) {
-      O <- rep(NA, length=N.studies.OE)
+  #######################################################################################
+  # Meta-analysis of the total OE ratio
+  #######################################################################################
+  if (measure=="OE") {
+    t.ma <- ifelse(missing(t.ma), NA, t.ma)
+    
+    if(missing(t.val)) {
+      t.val <- rep(NA, k)
     }
     if (missing(E)) {
-      E <- rep(NA, length=N.studies.OE)
-    }
-    if (missing(Po)) {
-      Po <- rep(NA, length=N.studies.OE)
+      E <- rep(NA, length=k)
     }
     if (missing(Po.se)) {
-      Po.se <- rep(NA, length=N.studies.OE)
+      Po.se <- rep(NA, length=k)
     }
     if (missing(Pe)) {
-      Pe <- rep(NA, length=N.studies.OE)
+      Pe <- rep(NA, length=k)
     }
     if (missing(OE)) {
-      OE <- rep(NA, length=N.studies.OE)
+      OE <- rep(NA, length=k)
     }
     if (missing(OE.se)) {
-      OE.se <- rep(NA, length=N.studies.OE)
+      OE.se <- rep(NA, length=k)
     }
     if (missing(citl)) {
-      citl <- rep(NA, length=N.studies.OE)
+      citl <- rep(NA, length=k)
     }
     if (missing(citl.se)) {
-      citl.se <- rep(NA, length=N.studies.OE)
+      citl.se <- rep(NA, length=k)
     }
     if (missing(OE.95CI)) {
-      OE.95CI <- array(NA, dim=c(N.studies.OE,2))
+      OE.95CI <- array(NA, dim=c(k,2))
     }
     if (is.null(dim(OE.95CI))) {
       warning("Invalid dimension for 'OE.95CI', argument ignored.")
-      OE.95CI <- array(NA, dim=c(N.studies.OE,2))
+      OE.95CI <- array(NA, dim=c(k,2))
     }
-    if (dim(OE.95CI)[2] != 2 | dim(OE.95CI)[1] != N.studies.OE) {
+    if (dim(OE.95CI)[2] != 2 | dim(OE.95CI)[1] != k) {
       warning("Invalid dimension for 'OE.95CI', argument ignored.")
-      OE.95CI <- array(NA, dim=c(N.studies.OE,2))
+      OE.95CI <- array(NA, dim=c(k,2))
     }
     
     # Check if the length of all relevant arguments is consistent
@@ -239,58 +283,57 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.se, OE.95CI, citl, citl.
       stop("Dimension mismatch")
     }
     
-    out$oe$model <- pars.default$model.oe
-    class(out$oe) <- "vmasum"
-    
-    if(missing(slab)) {
-      out$oe$slab <- paste("Study",seq(1, N.studies.OE))
-    } else {
-      out$oe$slab <- slab
-    }
-    
+    out$model <- pars.default$model.oe
 
+    if (verbose) message("Extracting/computing estimates of the total O:E ratio ...")
+    
     ds <- generateOEdata(O=O, E=E, Po=Po, Po.se=Po.se, Pe=Pe, OE=OE, OE.se=OE.se, OE.95CI=OE.95CI, 
-                         citl=citl, citl.se=citl.se, N=N, t.ma=t.ma, t.val=t.val,
-                         pars=pars.default)
-    out$oe$data <- ds
+                         citl=citl, citl.se=citl.se, N=N, t.ma=t.ma, t.val=t.val, t.extrapolate=t.extrapolate,
+                         pars=pars.default, verbose=verbose)
+    
+    out$numstudies <- length(which(rowMeans(!is.na(ds))==1))
       
     if (method != "BAYES") { # Use of rma
       
       if (pars.default$model.oe=="normal/identity") {
-        fit <- rma(yi=ds$theta, sei=ds$theta.se, data=ds, method=method, knha=, slab=out$oe$slab, ...) 
+        fit <- rma(yi=ds$theta, sei=ds$theta.se, data=ds, method=method, test=test, slab=out$slab, ...) 
         preds <- predict(fit)
         cr.lb <- ifelse(method=="FE", NA, preds$cr.lb)
         cr.ub <- ifelse(method=="FE", NA, preds$cr.ub)
         results <- c(coefficients(fit), c(preds$ci.lb, preds$ci.ub, cr.lb, cr.ub))
-        out$oe$rma <- fit
+        out$rma <- fit
+        out$numstudies <- fit$k
       } else if (pars.default$model.oe=="normal/log") {
-        fit <- rma(yi=ds$theta, sei=ds$theta.se, data=ds, method=method, knha=knha, slab=out$oe$slab, ...) 
+        fit <- rma(yi=ds$theta, sei=ds$theta.se, data=ds, method=method, test=test, slab=out$slab, ...) 
         preds <- predict(fit)
         cr.lb <- ifelse(method=="FE", NA, preds$cr.lb)
         cr.ub <- ifelse(method=="FE", NA, preds$cr.ub)
         results <- c(exp(coefficients(fit)), exp(c(preds$ci.lb, preds$ci.ub, cr.lb, cr.ub)))
-        out$oe$rma <- fit
+        out$rma <- fit
+        out$numstudies <- fit$k
       } else if (pars.default$model.oe=="poisson/log" && method!="FE") {
         if (method!="ML") warning("The poisson/log model was fitted using ML.")
-        if (knha) warning("The Sidik-Jonkman-Hartung-Knapp correction cannot be applied")
+        if (test=="knha") warning("The Sidik-Jonkman-Hartung-Knapp correction cannot be applied")
         
         fit <- glmer(O~1|Study, offset=log(E), family=poisson(link="log"), data=ds)
         preds.ci <- confint(fit, quiet=!verbose, ...)
         preds.cr <- lme4::fixef(fit) + qt(c(0.025, 0.975), df=(lme4::ngrps(fit)-2))*sqrt(vcov(fit)[1,1]+(as.data.frame(lme4::VarCorr(fit))["vcov"])[1,1])
         results <- c(exp(lme4::fixef(fit)), exp(c(preds.ci["(Intercept)",], preds.cr)))
-        out$oe$lme4 <- fit
+        out$lme4 <- fit
+        out$numstudies <- nobs(fit)
       } else if (pars.default$model.oe=="poisson/log" && method=="FE") {
         fit <- glm(O~1, offset=log(E), family=poisson(link="log"), data=ds)
         preds.ci <- confint(fit, quiet=!verbose, ...)
         preds.cr <- c(NA, NA)
         results <- c(exp(coefficients(fit)), exp(c(preds.ci, preds.cr)))
-        out$oe$lme4 <- fit
+        out$glm <- fit
+        out$numstudies <- nobs(fit)
       } else {
         stop("Model not implemented yet!")
       }
       names(results) <- c("estimate", "95CIl", "95CIu", "95PIl", "95PIu")
       
-      out$oe$results <- results
+      out$results <- results
     } else {
       if (pars.default$model.oe=="normal/log") {
         i.select <- which(!is.na(ds$theta.se)) #omit non-informative studies
@@ -311,6 +354,7 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.se, OE.95CI, citl, citl.
       } else {
         stop("Model not implemented yet!")
       }
+      out$numstudies <- mvmeta_dat$Nstudies
       
       # Perform a Bayesian meta-analysis
       model <- generateBugsOE(pars=pars.default, ...)
@@ -338,22 +382,23 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.se, OE.95CI, citl, citl.
       results <- c(fit["mu.obs","Mean"], fit["mu.obs", c("Lower95", "Upper95")], fit["pred.obs", c("Lower95", "Upper95")])
       names(results) <- c("estimate", "95CIl", "95CIu", "95PIl", "95PIu")
       
-      out$oe$runjags <- jags.model
-      out$oe$PED <- sum(fit.dev$deviance)+sum(fit.dev$penalty)
-      out$oe$results <- results
+      out$runjags <- jags.model
+      out$PED <- sum(fit.dev$deviance)+sum(fit.dev$penalty)
+      out$results <- results
     }
+    
+    out$data <- ds
+    
+    return(out)
   }
-  
-  
-  
-  return(out)
+
 }
 
 .generateBugsCstat <- function(pars, 
                                 ...) # standard deviation for student T prior
-  {
+{
 
-  hp.tau.prec <- 1/(pars$hp.tau.sima**2)
+  hp.tau.prec <- 1/(pars$hp.tau.sigma**2)
   hp.mu.prec <- 1/pars$hp.mu.var
   
   out <- "model {\n " 
@@ -381,27 +426,17 @@ valmeta <- function(cstat, cstat.se, cstat.95CI, OE, OE.se, OE.95CI, citl, citl.
     stop("Specified link function not implemented")
   }
   out <- paste(out, "}", sep="")
+  
   return(out)
 }
 
 print.valmeta <- function(x, ...) {
-  if (!is.null(x$cstat$results)) {
+  if (x$measure=="cstat") {
     cat("Model results for the c-statistic:\n\n")
-    print(x$cstat)
-    if (x$cstat$num.estimated.var.c > 0)
-      cat(paste("\nNote: For ", x$cstat$num.estimated.var.c, " validation(s), the standard error of the concordance statistic swas estimated using method '", x$cstat$method.restore.se, "'.\n", sep=""))
-    
-    if (!is.null(x$oe$results)) {
-      cat("\n\n")
-    }
-  }
-  if (!is.null(x$oe$results)) {
+  } else if (x$measure=="OE") {
     cat("Model results for the total O:E ratio:\n\n")
-    print(x$oe)
   }
-}
-
-print.vmasum <- function(x, ...) {
+  
   print(x$results)
   if (!is.null(x$runjags)) {
     #Print penalized expected deviance
@@ -411,26 +446,34 @@ print.vmasum <- function(x, ...) {
     psrf.ul <-  x$runjags$psrf$psrf[,2]
     psrf.target <- x$runjags$psrf$psrf.target
     
-    if(sum(psrf.ul > psrf.target)>1) {
+    if(sum(psrf.ul > psrf.target)>0) {
       warning(paste("Model did not properly converge! The upper bound of the convergence diagnostic (psrf) exceeds", 
                     psrf.target, "for the parameters", 
-              paste(rownames(x$runjags$psrf$psrf)[which(psrf.ul > psrf.target)], " (psrf=", 
-                    round(x$runjags$psrf$psrf[which(psrf.ul > psrf.target),2],2), ")", collapse=", ", sep=""),
-              ". Consider re-running the analysis by increasing the optional arguments 'adapt', 'burnin' and/or 'sample'."  ))
+                    paste(rownames(x$runjags$psrf$psrf)[which(psrf.ul > psrf.target)], " (psrf=", 
+                          round(x$runjags$psrf$psrf[which(psrf.ul > psrf.target),2],2), ")", collapse=", ", sep=""),
+                    ". Consider re-running the analysis by increasing the optional arguments 'adapt', 'burnin' and/or 'sample'."  ))
     }
   }
-    
+  
+  cat("\n")
+  cat(paste("Number of studies included: ", x$numstudies))
+  if (x$measure=="cstat") {
+    se.sources <- c("Hanley","Newcombe.2","Newcombe.4") 
+    num.estimated.var.c <- sum(x$se.source %in% se.sources)
+    if (num.estimated.var.c > 0) {
+      restore.method <- (se.sources[se.sources %in% x$se.source])[1]
+      cat(paste("\nNote: For ", num.estimated.var.c, " validation(s), the standard error of the concordance statistic was estimated using method '", restore.method, "'.\n", sep=""))
+    }
+  }
 }
 
+
+
 plot.valmeta <- function(x, ...) {
-  if (!is.null(x$cstat)) {
-    plotForest(x$cstat, xlab="c-statistic", refline=NULL, ...)
-    if (!is.null(x$oe)) {
-      readline(prompt="Press [enter] to continue")
-    }
-  }
-  if (!is.null(x$oe)) {
-    plotForest(x$oe, xlab="O:E ratio", refline=1, ...)
+  if (x$measure=="cstat") {
+    plotForest(x, xlab="c-statistic", refline=NULL, ...)
+  } else if (x$measure=="OE") {
+    plotForest(x, xlab="Total O:E ratio", refline=1, ...)
   }
 }
 
