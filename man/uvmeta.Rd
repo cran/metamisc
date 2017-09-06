@@ -9,7 +9,7 @@
 \description{This function performs a univariate meta-analysis by assuming fixed or random effects.  Whereas the fixed effects model assumes that all studies in the analysis share a common effect size, the random-effects model allows different study-specific effect sizes. Concretely, if we move from fixed-effect weights to random-effects weights, large studies lose influence and small studies gain influence (Borenstein 2010). }
 
 \usage{
-uvmeta(r, r.se, method="REML", test="knha", labels, na.action, pars, 
+uvmeta(r, r.se, method="REML", test="knha", labels, na.action, n.chains=4, pars, 
        verbose=FALSE, ...)}
 
 \arguments{
@@ -19,7 +19,8 @@ uvmeta(r, r.se, method="REML", test="knha", labels, na.action, pars,
   \item{test}{character string specifying how test statistics and confidence intervals for the fixed effects should be computed. By default (\code{test="knha"}), the method by Knapp and Hartung (2003) is used for adjusting test statistics and confidence intervals.  Type '\code{?rma}' for more details.}
   \item{labels}{vector of characters containing the labels for the studies}
   \item{na.action}{a function which indicates what should happen when the data contain NAs. Defaults to "na.fail", other options are "na.omit", "na.exclude" or "na.pass".}
-  \item{pars}{A list with additional arguments. The following parameters configure the MCMC sampling procedure:  \code{hp.mu.mean} (Hyperparameter: mean of the prior distribution of the fixed/random effects model, defaults to zero), \code{hp.mu.var} (Hyperparameter: variance of the prior distribution of the fixed/random effects model, defaults to 1000), \code{n.chains} (specifies the number of parallel chains)}
+  \item{n.chains}{the number of chains to use in the Gibbs sampler (\code{method="BAYES"}). More chains will improve the sensitivity of the convergence diagnostic, but will cause the simulation to run more slowly. The default number of chains is 4.}
+  \item{pars}{A list with additional arguments. The following parameters configure the MCMC sampling procedure:  \code{hp.mu.mean} (Hyperparameter: mean of the prior distribution of the fixed/random effects model, defaults to zero), \code{hp.mu.var} (Hyperparameter: variance of the prior distribution of the fixed/random effects model, defaults to 1000)}
   \item{verbose}{if TRUE then messages generated during the fitting process will be displayed.}
   \item{\dots}{Additional arguments that are passed to \pkg{rma} or \pkg{runjags} (if \code{method="BAYES"}).}
 }

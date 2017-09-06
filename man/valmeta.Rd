@@ -11,7 +11,7 @@ This function allows to meta-analyze the performance of a prediction model, and 
 \usage{
 valmeta(measure="cstat", cstat, cstat.se, cstat.95CI, OE, OE.se, OE.95CI, citl, citl.se,
         N, O, E, Po, Po.se, Pe, t.val, t.ma, t.extrapolate=FALSE, method="REML", 
-        test="knha", verbose=FALSE, slab, n.chains = 4, pars, \ldots)
+        test="knha", verbose=FALSE, slab, n.chains=4, pars, \ldots)
 
 }
 %- maybe also 'usage' for other objects documented here.

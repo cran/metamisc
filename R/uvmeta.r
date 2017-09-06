@@ -2,18 +2,17 @@
 
 #TODO: allow data transformations
 uvmeta <- function(r, r.se, method="REML", test="knha", labels, na.action,
-                   pars, verbose=FALSE, ...) 
+                   n.chains=4, pars, verbose=FALSE, ...) 
   UseMethod("uvmeta")
 
 uvmeta.default <- function(r, r.se, method="REML", test="knha", labels, na.action, 
-                           pars, verbose=FALSE, ...)
+                           n.chains, pars, verbose=FALSE, ...)
 {
 
   
   pars.default <- list(level = 0.95,
                        hp.mu.mean = 0, 
-                       hp.mu.var = 1000,
-                       n.chains=4) 
+                       hp.mu.var = 1000) 
   
   # Check if we need to load runjags
   if (method=="BAYES") {
@@ -23,7 +22,11 @@ uvmeta.default <- function(r, r.se, method="REML", test="knha", labels, na.actio
     if (!requireNamespace("rjags", quietly = TRUE)) {
       stop("The package 'rjags' is currently not installed!")
     } 
+    if (n.chains<1 | n.chains%%1!=0) {
+      stop("Invalid number of chains specified for the Gibbs sampler!")
+    }
   }
+  
   
   if (length(r)!=length(r.se)) {
     stop("The vectors 'r' and 'r.se' have different lengths!")
@@ -97,7 +100,7 @@ uvmeta.default <- function(r, r.se, method="REML", test="knha", labels, na.actio
     model.pars <- list()
     model.pars[[1]] <- list(param="mu", param.f=rnorm, param.args=list(n=1, mean=pars.default$hp.mu.mean, sd=sqrt(pars.default$hp.mu.var)))
     model.pars[[2]] <- list(param="tau", param.f=runif, param.args=list(n=1, min=0, max=100))
-    inits <- generateMCMCinits(n.chains=pars.default$n.chains, model.pars=model.pars)
+    inits <- generateMCMCinits(n.chains=n.chains, model.pars=model.pars)
     
     jags.model <- runjags::run.jags(model=modelfile, 
                                     monitor = c("mu", "tausq", "theta.new", "PED"), 
@@ -119,6 +122,7 @@ uvmeta.default <- function(r, r.se, method="REML", test="knha", labels, na.actio
   }
   #attr(out$results,"level") <- pars.default$level
   out$data <- ds
+  out$numstudies <- dim(ds)[1]
   out$na.action <- na.action
   return(out)
 }

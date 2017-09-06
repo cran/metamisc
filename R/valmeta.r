@@ -32,6 +32,9 @@ valmeta <- function(measure="cstat", cstat, cstat.se, cstat.95CI, OE, OE.se, OE.
     if (!requireNamespace("rjags", quietly = TRUE)) {
       stop("The package 'rjags' is currently not installed!")
     } 
+    if (n.chains<1 | n.chains%%1!=0) {
+      stop("Invalid number of chains specified for the Gibbs sampler!")
+    }
   }
     
   #######################################################################################
@@ -156,7 +159,9 @@ valmeta <- function(measure="cstat", cstat, cstat.se, cstat.95CI, OE, OE.se, OE.
       theta.var <- ifelse(is.na(theta.var), theta.var.hat, theta.var)
 
       # Replace remaining missing values in theta.var by very large values
-      theta.var <- ifelse(is.na(theta.var), 10e6, theta.var)
+      # Omitted because it now gives error in metafor
+      # Ratio of largest to smallest sampling variance extremely large. Cannot obtain stable results.
+      #theta.var <- ifelse(is.na(theta.var), 10e6, theta.var)
     }
     
     #Only calculate 95% CI for which no original values were available
@@ -170,11 +175,14 @@ valmeta <- function(measure="cstat", cstat, cstat.se, cstat.95CI, OE, OE.se, OE.
     
     if (method != "BAYES") { # Use of rma
       
+      # Identify which studies can be used for meta-analysis
+      selstudies <- which(!is.na(ds[,"theta"]) & !is.na(theta.var))
+      
       # Apply the meta-analysis
       fit <- rma(yi=theta, vi=theta.var, data=ds, method=method, test=test, slab=out$cstat$slab, ...) 
       preds <- predict(fit)
       
-      ds[, "theta.blup"] <- blup(fit)$pred
+      ds[selstudies, "theta.blup"] <- blup(fit)$pred
       
       results <- as.data.frame(array(NA, dim=c(1,5)))
       if (pars.default$model.cstat == "normal/logit") {
@@ -241,7 +249,7 @@ valmeta <- function(measure="cstat", cstat, cstat.se, cstat.95CI, OE, OE.se, OE.
     t.ma <- ifelse(missing(t.ma), NA, t.ma)
     
     if(missing(t.val)) {
-      t.val <- rep(NA, k)
+      t.val <- rep(NA, length=k)
     }
     if (missing(E)) {
       E <- rep(NA, length=k)
@@ -388,6 +396,7 @@ valmeta <- function(measure="cstat", cstat, cstat.se, cstat.95CI, OE, OE.se, OE.
     }
     
     out$data <- ds
+    out$se.source <- theta.var.source
     
     return(out)
   }

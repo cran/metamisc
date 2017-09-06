@@ -8,13 +8,14 @@
 %\tabular{ll}{
 %Package: \tab metamisc\cr
 %Type: \tab Package\cr
-%Version: \tab 0.1.5\cr
-%Date: \tab 2017-06-18\cr
+%Version: \tab 0.1.6\cr
+%Date: \tab 2017-07-30\cr
 %License: \tab GPL-2 \cr
 %}
 The following functionality is currently implemented: univariate meta-analysis of summary data (\code{\link{uvmeta}}), bivariate meta-analysis of correlated outcomes (\code{\link{riley}}), bivariate meta-analysis of diagnostic test accuracy data, meta-analysis of prediction model performance (\code{\link{valmeta}}).}
 
-\author{Thomas Debray <thomas.debray@gmail.com>}
+\author{Thomas Debray <thomas.debray@gmail.com>
+Valentijn de Jong}
 
 \references{
 Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review and meta-analysis of prediction model performance. \emph{BMJ}. 2017; \bold{356}:i6460. 
