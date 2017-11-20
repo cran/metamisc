@@ -1,3 +1,200 @@
+#' Meta-analysis of prediction model performance
+#'
+#' This function provides summary estimates for the concordance statistic, the total observed-expected ratio 
+#' or the calibration slope. Where appropriate, data transformations are applied and missing information 
+#' is derived from available quantities. Unless specified otherwise, all meta-analysis models assume random effects 
+#' and are fitted using restricted maximum likelihood estimation with the \pkg{metafor} package (Viechtbauer 2010).  
+#' Further, confidence intervals for the average performance are based on the Hartung-Knapp-Sidik-Jonkman method. 
+#' When conducting a Bayesian meta-analysis, the R packages \pkg{runjags} and \pkg{rjags} must be installed.
+#' 
+#' @param  measure A character string indicating which summary performance measure should be calculated. Options are
+#' \code{"cstat"} (meta-analysis of the concordance statistic) and \code{"OE"} 
+#' (meta-analysis of the total observed-expected ratio). See `Details' for more information.
+#' @param cstat Optional vector with the estimated c-statistic for each valiation
+#' @param cstat.se Optional vector with the standard error of the estimated c-statistics
+#' @param cstat.95CI Optional 2-dimensional array with the lower (first column) and upper (second column) boundary 
+#' of the 95\% confidence interval of the estimated c-statistics
+#' @param OE Optional vector with the estimated ratio of total observed versus total expected events
+#' @param OE.se Optional vector with the standard errors of the estimated O:E ratios
+#' @param OE.95CI Optional 2-dimensional array with the lower (first column) and upper (second column) boundary 
+#' of the 95\% confidence interval of the total O:E ratios
+#' @param citl Optional vector with the estimated calibration-in-the-large for each valiation
+#' @param citl.se Optional vector with the standard error of the estimated calibration-in-the-large statistics
+#' @param N Optional vector with the total number of participants for each valiation
+#' @param O Optional vector with the total number of observed events for each valiation
+#' (if specified, during time \code{t.val})
+#' @param E Optional vector with the total number of expected events for each valiation 
+#' (if specified, during time \code{t.val})
+#' @param Po Optional vector with the (cumulative) observed event probability for each valiation
+#' (if specified, during time \code{t.val})
+#' @param Po.se Optional vector with the standard errors of \code{Po}.
+#' @param Pe Optional vector with the (cumulative) expected event probability for each validation
+#' (if specified, during time \code{t.val})
+#' @param t.val Optional vector specifying the time period for which \code{cstat}, \code{O}, \code{E}, \code{Po} or
+#' \code{Pe} are applicable. Also specifies the time point at which \code{OE} and \code{CITL} have been calculated.
+#' @param t.ma Optional numeric value, specifying the target time period (of time point) of the meta-analysis
+#' @param t.extrapolate Optional logical indicating whether calibration performance of the prognostic model 
+#' should be extrapolated to time \code{t.ma}
+#' @param method Character string specifying whether a fixed- or a random-effects model should be fitted. 
+#' A fixed-effects model is fitted when using \code{method="FE"}. Random-effects models are fitted by setting method 
+#' equal to one of the following: \code{"REML"} (Default), \code{"DL"}, \code{"HE"}, \code{"SJ"}, \code{"ML"}, 
+#' \code{"EB"}, \code{"HS"}, \code{"GENQ"} or \code{"BAYES"}. See 'Details'.
+#' @param test Optional character string specifying how test statistics and confidence intervals for the fixed effects 
+#' should be computed. By default (\code{test="knha"}), the method by Knapp and Hartung (2003) is used for 
+#' adjusting test statistics and confidence intervals. Type '\code{?rma}' for more details.
+#' @param verbose If TRUE then messages generated during the fitting process will be displayed.
+#' @param slab Optional vector specifying the label for each study
+#' @param n.chains Optional numeric specifying the number of chains to use in the Gibbs sampler 
+#' (if \code{method="BAYES"}). More chains will improve the sensitivity of the convergence diagnostic, but will 
+#' cause the simulation to run more slowly. The default number of chains is 4.
+#' @param pars A list with additional arguments.  The following parameters configure the MCMC sampling procedure:  
+#' \code{hp.mu.mean} (mean of the prior distribution of the random effects model, defaults to 0), 
+#' \code{hp.mu.var} (variance of the prior distribution of the random effects model, defaults to 1E6), 
+#' \code{hp.tau.min} (minimum value for the between-study standard deviation, defaults to 0), 
+#' \code{hp.tau.max} (maximum value for the between-study standard deviation, defaults to 2), 
+#' \code{hp.tau.sigma} (standard deviation of the prior distribution for the between-study standard-deviation), 
+#' \code{hp.tau.dist} (prior distribution for the between-study standard-deviation. Defaults to \code{"dunif"}), 
+#' \code{hp.tau.df} (degrees of freedom for the prior distribution for the between-study standard-deviation. 
+#' Defaults to 3), \code{method.restore.c.se} (method for restoring missing estimates for the standard error 
+#' of the c-statistic. So far, only \code{"Newcombe.2"} and \code{"Newcombe.4"} are supported. 
+#' These methods have been described by Newcombe in 2006.), \code{model.cstat} (The likelihood/link for modeling 
+#' the c-statistic; see "Details"), \code{model.oe} (The likelihood/link for modeling the O:E ratio; see "Details")
+#' @param \ldots Additional arguments that are passed to \pkg{rma} or \pkg{runjags} (if \code{method="BAYES"}).
+#' 
+#' @details 
+#' \subsection{Meta-analysis of the concordance statistic}{
+#' A summary estimate for the concorcance (c-) statistic can be obtained by specifying \code{measure="cstat"}.
+#' The c-statistic is a measure of discrimination, and indicates the ability of a prediction model to 
+#' distinguish between patients developing and not developing the outcome. The c-statistic typically ranges 
+#' from 0.5 (no discriminative ability) to 1 (perfect discriminative ability). 
+#' A meta-analysis for the c-statistic will be performed if the c-statistics (\code{cstat}) and 
+#' their respective standard errors (\code{cstat.se}) are defined. For studies where the standard error 
+#' is unknown, it can be derived from the 95\% confidence interval, or from \code{cstat}, \code{O} and 
+#' \code{N} (Newcombe 2006). By default, the meta-analysis model assumes Normality for the logit of 
+#' the c-statistic (\code{model.cstat = "normal/logit"}). Alternatively, it is possible to summarize 
+#' raw estimates of the c-statistic by setting \code{model.cstat = "normal/identity"}.} 
+#' 
+#' \subsection{Meta-analysis of the total observed versus expected ratio}{
+#' A summary estimate for the total observed versus expected (O:E) ratiocan be obtained by specifying
+#' \code{measure="OE"}.
+#' The total O:E ratio provides a rough indication of the overall model calibration (across the 
+#' entire range of predicted risks). Currently, three methods have been implemented to obtain a summary 
+#' estimate of the total O:E ratio. By default, the meta-analysis model assumes   Normality for the 
+#' (natural) logarithm of the O:E ratios (\code{model.oe = "normal/log"}). Continuity corrections are 
+#' applied when necessary by adding 0.5 to \code{O}, \code{E} and \code{N}. Alternatively, it is possible 
+#' to model the total number of observed and expected events using a Poisson likelihood (Stijnen 2010). 
+#' The resulting model does not require continuity corrections for \code{O} and can be implemented by 
+#' setting \code{model.oe = "poisson/log"} (note that \code{hp.mu.var} is truncated to a maximum 
+#' value of 100 for \code{method="BAYES"}). Finally, it is possible to summarize raw estimates of the 
+#' O:E ratio by setting \code{model.oe = "normal/identity"}. 
+#' 
+#' When unkown, the standard error of the O:E ratio will be approximated in the following order from  
+#' (1) the 95\% confidence interval, (2) the standard error of \code{Po}, (3)  the error variance of the 
+#' binomial distribution, (4) the error variance of the Poisson distribution, or from 
+#' (5) the calibration-in-the-large statistic.    
+#' 
+#' For meta-analysis of prognostic models, it is recommended to provide information on the time period 
+#' (\code{t.val}) during which calibration was assessed in the validation study. When the time period of 
+#' the validation study does not correspond to the time period of interest (\code{t.ma}), observed and 
+#' expected survival probabilities will be extrapolated using Poisson distributions. Currently, 
+#' extrapolation of event rates is only supported for \code{model.oe = "normal/log"} and 
+#' \code{model.oe = "normal/identity"}. Note that  values for \code{O} and \code{N} should take 
+#' the presence of drop-out into account. This implies that \code{O} is ideally based on Kaplan-Meier 
+#' estimates, or that \code{N} should represent the total number of participants with complete follow-up.}
+#' 
+#' \subsection{Bayesian meta-analysis}{
+#' The prior distribution for the between-study standard deviation can be specified by \code{hp.tau.dist}, 
+#' and is always truncated by \code{hp.tau.min} and \code{hp.tau.max}. Initial values for the between-study 
+#' standard deviation are sampled from a uniform distribution with aformentioned boundaries. The following 
+#' distributions are supported for modeling the prior of the between-study standard deviation: 
+#' Uniform distribution (\code{hp.tau.dist="dunif"}; default), truncated Student-t distribution  
+#' (\code{hp.tau.dist="dhalft"}).}
+#' 
+#' @return An object of class \code{valmeta} with the following elements:
+#' \describe{
+##'  \item{"data"}{array with (transformed) data used for meta-analysis }
+##'  \item{"lme4"}{a fitted object of class \code{glmerMod} (if \code{lme4} was used for meta-analysis).}
+##'  \item{"measure"}{character string specifying the performance measure that has been meta-analysed.}
+##'  \item{"method"}{character string specifying the meta-analysis method.}
+##'  \item{"model"}{character string specifying the meta-analysis model (link function).}
+##'  \item{"results"}{numeric vector containing the meta-analysis results}
+##'  \item{"rma"}{a fitted object of class \code{rma} (if \code{metafor} was used for meta-analysis).}
+##'  \item{"runjags"}{a fitted object of class \code{runjags} (if \code{runjags} was used for meta-analysis).}
+##'  \item{"se.source"}{character vector specifying the source of the studies' standard errors.}
+##'  \item{"slab"}{vector specifying the label of each study.}
+##' }
+#' @references 
+#' Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review 
+#' and meta-analysis of prediction model performance. \emph{BMJ}. 2017; 356:i6460.\cr
+#' \cr
+#'  Hanley JA, McNeil BJ. The meaning and use of the area under a receiver operating characteristic (ROC) 
+#'  curve. \emph{Radiology}. 1982; 143(1):29--36.\cr
+#'  \cr
+#'  Newcombe RG. Confidence intervals for an effect size measure based on the Mann-Whitney statistic. 
+#'  Part 2: asymptotic methods and evaluation. \emph{Stat Med}. 2006; 25(4):559--73.\cr
+#'  \cr
+#'  Stijnen T, Hamza TH, Ozdemir P. Random effects meta-analysis of event outcome in the framework of 
+#'  the generalized linear mixed model with applications in sparse data. \emph{Stat Med}. 2010; 29(29):3046--67.\cr
+#'  \cr
+#'   Viechtbauer W. Conducting Meta-Analyses in R with the metafor Package. \emph{Journal of Statistical Software}. 
+#'   2010; 36(3). Available from: \url{http://www.jstatsoft.org/v36/i03/}
+#'   
+#' @seealso \code{\link{plot.valmeta}}
+#' 
+#' @examples 
+#' ######### Validation of prediction models with a binary outcome #########
+#' data(EuroSCORE)
+#' 
+#' # Meta-analysis of the c-statistic (random effects)
+#' fit <- with(EuroSCORE, valmeta(cstat=c.index, cstat.se=se.c.index, 
+#'                                cstat.95CI=cbind(c.index.95CIl,c.index.95CIu), 
+#'                                N=n, O=n.events, slab=Study))
+#' plot(fit)
+#' 
+#' # Nearly identical results when we need to estimate the SE
+#' with(EuroSCORE, valmeta(cstat=c.index,  N=n, O=n.events, slab=Study))
+#' 
+#' # Meta-analysis of the total O:E ratio (random effects)
+#' with(EuroSCORE, valmeta(measure="OE", O=n.events, E=e.events, N=n))    
+#' with(EuroSCORE, valmeta(measure="OE", O=n.events, E=e.events))        
+#' with(EuroSCORE, valmeta(measure="OE", Po=Po, Pe=Pe, N=n))
+#' with(EuroSCORE, valmeta(measure="OE", O=n.events, E=e.events, pars=list(model.oe="poisson/log")))
+#' 
+#' \dontrun{
+#' # Bayesian meta-analysis of the c-statistic (random effects)
+#' fit2 <- with(EuroSCORE, valmeta(cstat=c.index, cstat.se=se.c.index, 
+#'                                 cstat.95CI=cbind(c.index.95CIl,c.index.95CIu),
+#'                                 N=n, O=n.events, method="BAYES", slab=Study))
+#' plot(fit2)
+#' 
+#' # Bayesian meta-analysis of the O:E ratio
+#' pars <- list(model.oe="poisson/log", # Use a Poisson-Normal model
+#'              hp.tau.dist="dhalft",   # Prior for the between-study standard deviation
+#'              hp.tau.sigma=1.5,       # Standard deviation for 'hp.tau.dist'
+#'              hp.tau.df=3,            # Degrees of freedom for 'hp.tau.dist'
+#'              hp.tau.max=10)          # Maximum value for the between-study standard deviation
+#' with(EuroSCORE, valmeta(measure="OE", O=n.events, E=e.events, N=n, method="BAYES", 
+#'      slab=Study, pars=pars))
+#' } 
+#' 
+#' ######### Validation of prediction models with a time-to-event outcome #########
+#' data(Framingham)
+#' 
+#' # Meta-analysis of total O:E ratio after 10 years of follow-up
+#' with(Framingham, valmeta(measure="OE", Po=Po, Pe=Pe, N=n, t.val=t.val, t.ma=10))
+#' with(Framingham, valmeta(measure="OE", Po=Po, Pe=Pe, N=n, t.val=t.val, t.ma=10, t.extrapolate=TRUE))
+#' 
+#' @keywords meta-analysis discrimination  calibration
+#' 
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' 
+#' @export
+#' @import metafor
+#' @import mvtnorm
+#' @importFrom lme4 glmer
+#' @importFrom stats coef coefficients dnorm glm nobs optim pchisq qnorm qt pt rnorm runif confint poisson
+#' predict vcov as.formula formula model.frame model.frame.default update.formula family
+
 valmeta <- function(measure="cstat", cstat, cstat.se, cstat.95CI, OE, OE.se, OE.95CI, citl, citl.se,
                     N, O, E, Po, Po.se, Pe, t.val, t.ma, t.extrapolate=FALSE, method="REML", test="knha", 
                     verbose=FALSE, slab, n.chains = 4, pars, ...) {
@@ -90,11 +287,10 @@ valmeta <- function(measure="cstat", cstat, cstat.se, cstat.95CI, OE, OE.se, OE.
   # Assign study labels
   #######################################################################################
   if(missing(slab)) {
-    out$slab <- paste("Study",seq(1, k))
+    out$slab <- paste("Study", seq(1, k))
   } else {
-    out$slab <- as.character(slab)
+    out$slab <- make.unique(as.character(slab))
   }
-  
 
   #######################################################################################
   # Meta-analysis of the c-statistic
@@ -439,6 +635,8 @@ valmeta <- function(measure="cstat", cstat, cstat.se, cstat.95CI, OE, OE.se, OE.
   return(out)
 }
 
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' @export
 print.valmeta <- function(x, ...) {
   if (x$measure=="cstat") {
     cat("Model results for the c-statistic:\n\n")
@@ -476,11 +674,53 @@ print.valmeta <- function(x, ...) {
   }
 }
 
-
-
+#' Forest Plots
+#' 
+#' Function to create forest plots for objects of class \code{"valmeta"}.
+#' 
+#' @param x An object of class \code{"valmeta"}
+#' @param \ldots Additional arguments which are passed to \code{forest} from the package \code{metafor}.
+#' 
+#' @details Plots are generated using functionalities provided by the \code{metafor} pacakge. The forest plot 
+#' shows the performance estimates of each validation with corresponding confidence intervals. A polygon is 
+#' added to the bottom of the forest plot, showing the summary estimate based on the model (with the outer 
+#' edges of the polygon indicating the confidence interval limits). A 95\% prediction interval is added by default,  
+#' the dotted line indicates its (approximate) bounds.
+#' 
+#' @references 
+#' Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review 
+#' and meta-analysis of prediction model performance. \emph{BMJ}. 2017;356:i6460.\cr
+#' \cr
+#' Lewis S, Clarke M. Forest plots: trying to see the wood and the trees. \emph{BMJ}. 2001; 322(7300):1479--80. \cr
+#' \cr
+#' Riley RD, Higgins JPT, Deeks JJ. Interpretation of random effects meta-analyses. \emph{BMJ}. 2011 342:d549--d549.\cr
+#' \cr
+#'  Viechtbauer W. Conducting Meta-Analyses in R with the metafor Package. \emph{Journal of Statistical Software}. 
+#'  2010; 36(3). Available from: \url{http://www.jstatsoft.org/v36/i03/}
+#' @note As indicated by \code{metafor}, the labels, annotations, and symbols may become quite small and 
+#' impossible to read when the number of studies is quite large. Stretching the plot window vertically may 
+#' then provide a more readable figure (one should call the function again after adjusting the window size, 
+#' so that the label/symbol sizes can be properly adjusted). Also, the \code{cex}, \code{cex.lab}, and 
+#' \code{cex.axis} arguments are then useful to adjust the symbol and text sizes.
+#' 
+#' @examples 
+#' data(EuroSCORE)
+#' fit <- with(EuroSCORE, valmeta(cstat=c.index, cstat.se=se.c.index, 
+#'             cstat.95CI=cbind(c.index.95CIl,c.index.95CIu), N=n, O=n.events))
+#' plot(fit)
+#' 
+#' @keywords meta-analysis discrimination calibration
+#'             
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' 
+#' @import metafor
+#' @import ellipse
+#' @import ggplot2
+#' @importFrom stats reorder
+#' @export
 plot.valmeta <- function(x, ...) {
   if (x$measure=="cstat") {
-    plotForest(x, xlab="c-statistic", refline=NULL, ...)
+    plotForest(x, xlab="c-statistic", refline=0.5, ...)
   } else if (x$measure=="OE") {
     plotForest(x, xlab="Total O:E ratio", refline=1, ...)
   }

@@ -1,15 +1,20 @@
 export("riley")
 export("uvmeta")
+export("fat")
 export("valmeta")
 
 import("ellipse")
 import("metafor")
 import("mvtnorm")
+import("ggplot2")
 
 # Imports of specific functions
 importFrom("lme4", "glmer")
 importFrom("graphics", "abline", "axis", "box", "lines", "par", "plot", "points", "polygon", "text", "segments", "strheight")
-importFrom("stats", "coef", "coefficients", "dnorm", "glm", "nobs", "optim", "pchisq", "qnorm", "qt", "rnorm", "runif", "confint", "poisson", "predict", "vcov")
+importFrom("stats", "coef", "coefficients", "dnorm", "glm", "nobs", "optim", "pchisq", "qnorm", "qt", "pt", "rnorm", "runif", "confint", 
+           "poisson", "predict", "vcov", "as.formula", "formula", "model.frame", "model.frame.default", "update.formula", "family",
+           "reorder")
+importFrom("plyr","round_any")
 
 #Riley methods
 S3method(print, riley)
@@ -30,3 +35,15 @@ S3method(uvmeta, default)
 S3method(print, valmeta)
 S3method(plot, valmeta)
 #S3method(valmeta, default)
+
+#fat methods
+S3method(print, fat)
+S3method(plot, fat)
+
+
+#metapred methods
+S3method(print, metapred)
+S3method(coef, metapred)
+S3method(formula, metapred)
+S3method(family, metapred)
+S3method(predict, metapred)

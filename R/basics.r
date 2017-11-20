@@ -208,7 +208,7 @@ generateOEdata <- function(O, E, Po, Po.se, Pe, OE, OE.se, OE.95CI, citl, citl.s
   return(ds)
 }
 
-plotForest <- function(vmasum, xlab, refline, ...) {
+plotForestDeprecated <- function(vmasum, xlab, refline, ...) {
   inv.logit <- function(x) {1/(1+exp(-x)) }
   
   if (!is.null(vmasum$rma)) {
