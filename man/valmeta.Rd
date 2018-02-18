@@ -4,10 +4,10 @@
 \alias{valmeta}
 \title{Meta-analysis of prediction model performance}
 \usage{
-valmeta(measure = "cstat", cstat, cstat.se, cstat.95CI, OE, OE.se, OE.95CI,
-  citl, citl.se, N, O, E, Po, Po.se, Pe, t.val, t.ma, t.extrapolate = FALSE,
-  method = "REML", test = "knha", verbose = FALSE, slab, n.chains = 4,
-  pars, ...)
+valmeta(measure = "cstat", cstat, cstat.se, cstat.95CI, sd.LP, OE, OE.se,
+  OE.95CI, citl, citl.se, N, O, E, Po, Po.se, Pe, t.val, t.ma,
+  t.extrapolate = FALSE, method = "REML", test = "knha",
+  verbose = FALSE, slab, n.chains = 4, pars, ...)
 }
 \arguments{
 \item{measure}{A character string indicating which summary performance measure should be calculated. Options are
@@ -20,6 +20,8 @@ valmeta(measure = "cstat", cstat, cstat.se, cstat.95CI, OE, OE.se, OE.95CI,
 
 \item{cstat.95CI}{Optional 2-dimensional array with the lower (first column) and upper (second column) boundary 
 of the 95\% confidence interval of the estimated c-statistics}
+
+\item{sd.LP}{Optional vector with the standard deviation of the linear predictor (prognostic index)}
 
 \item{OE}{Optional vector with the estimated ratio of total observed versus total expected events}
 
@@ -54,7 +56,8 @@ of the 95\% confidence interval of the total O:E ratios}
 \item{t.ma}{Optional numeric value, specifying the target time period (of time point) of the meta-analysis}
 
 \item{t.extrapolate}{Optional logical indicating whether calibration performance of the prognostic model 
-should be extrapolated to time \code{t.ma}}
+should be extrapolated to time \code{t.ma}. Otherwise, studies where \code{t.val!=t.ma} will be omitted
+when meta-analysing the total O:E ratio.}
 
 \item{method}{Character string specifying whether a fixed- or a random-effects model should be fitted. 
 A fixed-effects model is fitted when using \code{method="FE"}. Random-effects models are fitted by setting method 
@@ -73,7 +76,7 @@ adjusting test statistics and confidence intervals. Type '\code{?rma}' for more 
 (if \code{method="BAYES"}). More chains will improve the sensitivity of the convergence diagnostic, but will 
 cause the simulation to run more slowly. The default number of chains is 4.}
 
-\item{pars}{A list with additional arguments.  The following parameters configure the MCMC sampling procedure:
+\item{pars}{A list with additional arguments.  See 'Details' for more information. The following parameters configure the MCMC sampling procedure:
 \code{hp.mu.mean} (mean of the prior distribution of the random effects model, defaults to 0), 
 \code{hp.mu.var} (variance of the prior distribution of the random effects model, defaults to 1E6), 
 \code{hp.tau.min} (minimum value for the between-study standard deviation, defaults to 0), 
@@ -81,9 +84,8 @@ cause the simulation to run more slowly. The default number of chains is 4.}
 \code{hp.tau.sigma} (standard deviation of the prior distribution for the between-study standard-deviation), 
 \code{hp.tau.dist} (prior distribution for the between-study standard-deviation. Defaults to \code{"dunif"}), 
 \code{hp.tau.df} (degrees of freedom for the prior distribution for the between-study standard-deviation. 
-Defaults to 3), \code{method.restore.c.se} (method for restoring missing estimates for the standard error 
-of the c-statistic. So far, only \code{"Newcombe.2"} and \code{"Newcombe.4"} are supported. 
-These methods have been described by Newcombe in 2006.), \code{model.cstat} (The likelihood/link for modeling 
+Defaults to 3). Other arguments are \code{method.restore.c.se} (method for restoring missing estimates for the standard error 
+of the c-statistic. See \code{\link{ccalc}} for more information), \code{model.cstat} (The likelihood/link for modeling 
 the c-statistic; see "Details"), \code{model.oe} (The likelihood/link for modeling the O:E ratio; see "Details")}
 
 \item{\ldots}{Additional arguments that are passed to \pkg{rma} or \pkg{runjags} (if \code{method="BAYES"}).}
@@ -91,15 +93,14 @@ the c-statistic; see "Details"), \code{model.oe} (The likelihood/link for modeli
 \value{
 An object of class \code{valmeta} with the following elements:
 \describe{
- \item{"data"}{array with (transformed) data used for meta-analysis }
- \item{"lme4"}{a fitted object of class \code{glmerMod} (if \code{lme4} was used for meta-analysis).}
+ \item{"data"}{array with (transformed) data used for meta-analysis, and method(s) used for restoring missing information. }
+ \item{"lme4"}{a fitted object of class \code{glmerMod} (if \pkg{lme4} was used for meta-analysis).}
  \item{"measure"}{character string specifying the performance measure that has been meta-analysed.}
  \item{"method"}{character string specifying the meta-analysis method.}
  \item{"model"}{character string specifying the meta-analysis model (link function).}
  \item{"results"}{numeric vector containing the meta-analysis results}
- \item{"rma"}{a fitted object of class \code{rma} (if \code{metafor} was used for meta-analysis).}
- \item{"runjags"}{a fitted object of class \code{runjags} (if \code{runjags} was used for meta-analysis).}
- \item{"se.source"}{character vector specifying the source of the studies' standard errors.}
+ \item{"rma"}{a fitted object of class \link[metafor]{rma} (if \pkg{metafor} was used for meta-analysis).}
+ \item{"runjags"}{a fitted object of class \code{runjags} (if \pkg{runjags} was used for meta-analysis).}
  \item{"slab"}{vector specifying the label of each study.}
 }
 }
@@ -116,49 +117,53 @@ When conducting a Bayesian meta-analysis, the R packages \pkg{runjags} and \pkg{
 A summary estimate for the concorcance (c-) statistic can be obtained by specifying \code{measure="cstat"}.
 The c-statistic is a measure of discrimination, and indicates the ability of a prediction model to 
 distinguish between patients developing and not developing the outcome. The c-statistic typically ranges 
-from 0.5 (no discriminative ability) to 1 (perfect discriminative ability). 
-A meta-analysis for the c-statistic will be performed if the c-statistics (\code{cstat}) and 
-their respective standard errors (\code{cstat.se}) are defined. For studies where the standard error 
-is unknown, it can be derived from the 95\% confidence interval, or from \code{cstat}, \code{O} and 
-\code{N} (Newcombe 2006). By default, the meta-analysis model assumes Normality for the logit of 
-the c-statistic (\code{model.cstat = "normal/logit"}). Alternatively, it is possible to summarize 
-raw estimates of the c-statistic by setting \code{model.cstat = "normal/identity"}.} 
+from 0.5 (no discriminative ability) to 1 (perfect discriminative ability). When missing, the c-statistic 
+and/or its standard error are derived from other reported information. 
+See \code{\link{ccalc}} for more information.
+
+By default, it is assumed that the logit of the c-statistic is Normally distributed within and across studies
+(\code{pars$model.cstat = "normal/logit"}). Alternatively, it is possible to assume that the raw c-statistic 
+is Normally distributed across studies \code{pars$model.cstat = "normal/identity"}. 
+} 
 
 \subsection{Meta-analysis of the total observed versus expected ratio}{
-A summary estimate for the total observed versus expected (O:E) ratiocan be obtained by specifying
-\code{measure="OE"}.
-The total O:E ratio provides a rough indication of the overall model calibration (across the 
-entire range of predicted risks). Currently, three methods have been implemented to obtain a summary 
-estimate of the total O:E ratio. By default, the meta-analysis model assumes   Normality for the 
-(natural) logarithm of the O:E ratios (\code{model.oe = "normal/log"}). Continuity corrections are 
-applied when necessary by adding 0.5 to \code{O}, \code{E} and \code{N}. Alternatively, it is possible 
-to model the total number of observed and expected events using a Poisson likelihood (Stijnen 2010). 
-The resulting model does not require continuity corrections for \code{O} and can be implemented by 
-setting \code{model.oe = "poisson/log"} (note that \code{hp.mu.var} is truncated to a maximum 
-value of 100 for \code{method="BAYES"}). Finally, it is possible to summarize raw estimates of the 
-O:E ratio by setting \code{model.oe = "normal/identity"}. 
+A summary estimate for the total observed versus expected (O:E) ratio can be obtained by specifying
+\code{measure="OE"}. The total O:E ratio provides a rough indication of the overall model calibration (across the 
+entire range of predicted risks). 
 
-When unkown, the standard error of the O:E ratio will be approximated in the following order from  
-(1) the 95\% confidence interval, (2) the standard error of \code{Po}, (3)  the error variance of the 
-binomial distribution, (4) the error variance of the Poisson distribution, or from 
-(5) the calibration-in-the-large statistic.    
+For frequentist meta-analysis, within-study variation can either be modeled using a Normal (\code{model.oe = "normal/log"} 
+or \code{model.oe = "normal/identity"}) or a Poisson distribution (\code{model.oe = "normal/log"}). 
+
+When performing a Bayesian meta-analysis, all data are modeled using a one-stage random effects (hierarchical related regression) model.
+In particular, a binomial distribution (if \code{O}, \code{E} and \code{N} is known), a poisson distribution 
+(if only \code{O} and \code{E} are known) or a Normal distribution (if \code{OE} and \code{OE.se} or \code{OE.95CI} are known) is selected separately for each study.
 
 For meta-analysis of prognostic models, it is recommended to provide information on the time period 
 (\code{t.val}) during which calibration was assessed in the validation study. When the time period of 
-the validation study does not correspond to the time period of interest (\code{t.ma}), observed and 
-expected survival probabilities will be extrapolated using Poisson distributions. Currently, 
-extrapolation of event rates is only supported for \code{model.oe = "normal/log"} and 
-\code{model.oe = "normal/identity"}. Note that  values for \code{O} and \code{N} should take 
-the presence of drop-out into account. This implies that \code{O} is ideally based on Kaplan-Meier 
-estimates, or that \code{N} should represent the total number of participants with complete follow-up.}
+the validation study does not correspond to the time period of interest (\code{t.ma}), corresponding 
+studies are omitted from the meta-analysis. It is possible to extrapolate observed
+event rates by setting \code{t.extrapolate=TRUE}. This approach is currently only supported for
+frequentist meta-analysis models with \code{model.oe = "normal/log"} or \code{model.oe = "normal/identity"}. 
+}
 
 \subsection{Bayesian meta-analysis}{
-The prior distribution for the between-study standard deviation can be specified by \code{hp.tau.dist}, 
-and is always truncated by \code{hp.tau.min} and \code{hp.tau.max}. Initial values for the between-study 
-standard deviation are sampled from a uniform distribution with aformentioned boundaries. The following 
-distributions are supported for modeling the prior of the between-study standard deviation: 
-Uniform distribution (\code{hp.tau.dist="dunif"}; default), truncated Student-t distribution  
-(\code{hp.tau.dist="dhalft"}).}
+All Bayesian meta-analysis models assume random effects by default. Results are based on the posterior median. 
+Credibility and prediction intervals are directly obtained from the corresponding posterior quantiles.
+
+The prior distribution for the (transformed) summary estimate is always modeled using a Normal distribution, 
+with mean \code{hp.mu.mean} (defaults to 0) and variance 
+\code{hp.mu.var} (defaults to 1E6). For meta-analysis of the total O:E ratio, the maximum value for \code{hp.mu.var} is 100.
+
+By default, the prior distribution for the between-study standard deviation is modeled using a uniform distribution 
+(\code{hp.tau.dist="dunif"}), with boundaries \code{hp.tau.min} and \code{hp.tau.max}. Alternatively, it is possible
+to specify a truncated Student-t distribution (\code{hp.tau.dist="dhalft"}) with a mean of \code{hp.tau.mean}, 
+a standard deviation of \code{hp.tau.sigma} and \code{hp.tau.df} degrees of freedom. This distribution is again 
+restricted to the range \code{hp.tau.min} to \code{hp.tau.max}.
+}
+}
+\note{
+The width of calculated confidence, credibility and prediction intervals can be specified 
+using \code{level} in the \code{pars} argument (defaults to 0.95).
 }
 \examples{
 ######### Validation of prediction models with a binary outcome #########
@@ -173,27 +178,36 @@ plot(fit)
 # Nearly identical results when we need to estimate the SE
 with(EuroSCORE, valmeta(cstat=c.index,  N=n, O=n.events, slab=Study))
 
-# Meta-analysis of the total O:E ratio (random effects)
+# Two-stage meta-analysis of the total O:E ratio (random effects)
 with(EuroSCORE, valmeta(measure="OE", O=n.events, E=e.events, N=n))    
 with(EuroSCORE, valmeta(measure="OE", O=n.events, E=e.events))        
 with(EuroSCORE, valmeta(measure="OE", Po=Po, Pe=Pe, N=n))
-with(EuroSCORE, valmeta(measure="OE", O=n.events, E=e.events, pars=list(model.oe="poisson/log")))
+
+# One-stage meta-analysis of the total O:E ratio (random effects)
+with(EuroSCORE, valmeta(measure="OE", O=n.events, E=e.events, method="ML",
+                        pars=list(model.oe="poisson/log")))
 
 \dontrun{
-# Bayesian meta-analysis of the c-statistic (random effects)
+# Bayesian random effects meta-analysis of the c-statistic
 fit2 <- with(EuroSCORE, valmeta(cstat=c.index, cstat.se=se.c.index, 
                                 cstat.95CI=cbind(c.index.95CIl,c.index.95CIu),
                                 N=n, O=n.events, method="BAYES", slab=Study))
-plot(fit2)
 
-# Bayesian meta-analysis of the O:E ratio
-pars <- list(model.oe="poisson/log", # Use a Poisson-Normal model
-             hp.tau.dist="dhalft",   # Prior for the between-study standard deviation
+# Bayesian one-stage random effects meta-analysis of the total O:E ratio
+# Consider that some (but not all) studies do not provide information on N
+# A Poisson distribution will be used for studies 1, 2, 5, 10 and 20
+# A Binomial distribution will be used for the remaining studies
+EuroSCORE.new <- EuroSCORE
+EuroSCORE.new$n[c(1, 2, 5, 10, 20)] <-  NA
+pars <- list(hp.tau.dist="dhalft",   # Prior for the between-study standard deviation
              hp.tau.sigma=1.5,       # Standard deviation for 'hp.tau.dist'
              hp.tau.df=3,            # Degrees of freedom for 'hp.tau.dist'
              hp.tau.max=10)          # Maximum value for the between-study standard deviation
-with(EuroSCORE, valmeta(measure="OE", O=n.events, E=e.events, N=n, method="BAYES", 
-     slab=Study, pars=pars))
+fit3 <- with(EuroSCORE.new, valmeta(measure="OE", O=n.events, E=e.events, N=n, 
+        method="BAYES", slab=Study, pars=pars))
+plot(fit3)
+print(fit3$runjags$model) # Inspect the JAGS model
+print(fit3$runjags$data)  # Inspect the JAGS data
 } 
 
 ######### Validation of prediction models with a time-to-event outcome #########
@@ -205,23 +219,18 @@ with(Framingham, valmeta(measure="OE", Po=Po, Pe=Pe, N=n, t.val=t.val, t.ma=10, 
 
 }
 \references{
-Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review 
-and meta-analysis of prediction model performance. \emph{BMJ}. 2017; 356:i6460.\cr
-\cr
- Hanley JA, McNeil BJ. The meaning and use of the area under a receiver operating characteristic (ROC) 
- curve. \emph{Radiology}. 1982; 143(1):29--36.\cr
- \cr
- Newcombe RG. Confidence intervals for an effect size measure based on the Mann-Whitney statistic. 
- Part 2: asymptotic methods and evaluation. \emph{Stat Med}. 2006; 25(4):559--73.\cr
- \cr
- Stijnen T, Hamza TH, Ozdemir P. Random effects meta-analysis of event outcome in the framework of 
- the generalized linear mixed model with applications in sparse data. \emph{Stat Med}. 2010; 29(29):3046--67.\cr
- \cr
-  Viechtbauer W. Conducting Meta-Analyses in R with the metafor Package. \emph{Journal of Statistical Software}. 
-  2010; 36(3). Available from: \url{http://www.jstatsoft.org/v36/i03/}
+\itemize{
+\item Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review 
+and meta-analysis of prediction model performance. \emph{BMJ}. 2017; 356:i6460.
+\item Stijnen T, Hamza TH, Ozdemir P. Random effects meta-analysis of event outcome in the framework of 
+the generalized linear mixed model with applications in sparse data. \emph{Stat Med}. 2010; 29(29):3046--67.
+\item Viechtbauer W. Conducting Meta-Analyses in R with the metafor Package. \emph{Journal of Statistical Software}. 
+2010; 36(3). Available from: \url{http://www.jstatsoft.org/v36/i03/}
+}
 }
 \seealso{
-\code{\link{plot.valmeta}}
+\code{\link{ccalc}} to calculate concordance statistics and corresponding standard errors, 
+\code{\link{plot.valmeta}} to generate forest plots
 }
 \author{
 Thomas Debray <thomas.debray@gmail.com>

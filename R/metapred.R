@@ -1,4 +1,10 @@
 ### To add / change:
+# @Valentijn: perhaps better to combine param perfFUN, genFUN and selFUN into one parameter with 3 or 4 distinct options
+# @Valentijn: I suggest to omit intercept recalibration. The intercept issue can be addressed directly by specifying distinct 
+# error functions that do or do not account for mis-calibration in intercept term
+# @Valentijn: I would center covariates by default, this often helps to improve generalizability and also speeds estimation
+# @Valentijn: You can change default of meta.method to DL. This is a lot faster and has limited implications on estimated means.
+
 # is.metapred()
 # variances for intercept recalibration.
 # One-stage MA: predStep: is  type = response correct?
@@ -45,9 +51,11 @@
 #' @param meta.method Name of method for meta-analysis. Default is "REML". For more options see \link[metafor]{rma}.
 #' @param predFUN Function for predicting new values. Defaults to the appropriate link functions for two-stage MA where
 #' \code{glm()} or \code{lm()} is used in the first stage. For one-stage models \code{predict()} is used.
-#' @param perfFUN Function for computing the performance of the prediction models. Default: mean squared error.
-#' @param genFUN Function computing generalizability measure using the performance measures. Default: (absolute) mean.
-#' \code{squareddiff} for a penalty equal to the mean squared differences between coefficients.
+#' @param perfFUN Function for computing the performance of the prediction models. Default: mean squared error (\code{perfFUN="mse"}).
+#' Other options are \code{"vare"}.
+#' @param genFUN Function computing generalizability measure using the performance measures. Default: (absolute) mean  
+#' (\code{genFUN="absmean"}). Choose \code{squareddiff} for a penalty equal to the mean squared differences between 
+#' coefficients. Alternatively, choose \code{pooledvar} for a weighted average of variance terms.
 #' @param selFUN Function for selecting the best method. Default: lowest value for \code{genFUN}. Should be set to
 #' "which.max" if high values for \code{genFUN} indicate a good model.
 #' @param ... To pass arguments to estFUN (e.g. family = "binomial"), or other methods.
@@ -78,7 +86,7 @@
 #' 
 #' @import stats
 #'
-#' @importFrom stats formula
+#' @importFrom stats formula var
 #'
 #' @export
 
@@ -200,6 +208,7 @@ metapred <- function(data, strata, formula = NULL, estFUN = "glm", stepwise = TR
   return(out)
 }
 
+#' @method print metapred
 #' @export
 print.metapred <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   cat("Call: ");                       print(x$call); cat("\n")
@@ -236,7 +245,11 @@ perfStep <- function(newdata, b, fit, two.stage, ccs = rep(list(1:ncol(newdata),
   out
 }
 
+# Error function: Mean Squared Error
 mse <- function(p, y, data = NULL, ...) mean((p - y)^2)
+
+# Error function: Variance of prediction error
+vare <- function(p, y, data = NULL, ...) var(p-y)
 
 absmean <- function(perf.measures, ...) {
   pm <- unlist(perf.measures)
@@ -246,7 +259,13 @@ absmean <- function(perf.measures, ...) {
 squareddiff <- function(perf.measures, ...) {
   pm <- unlist(perf.measures)
   abs(mean(pm)) + mean((mean(pm) - pm)^2)
-  }
+}
+
+pooledvar <- function(perf.measures, N, ...) {
+  pm <- unlist(perf.measures)
+  ## TODO: Extract sample size for each cluster and apply corresponding to the right perf.measures
+  
+}
 
 # Gets the predict method.
 # fit Model fit object.
@@ -304,6 +323,7 @@ predict.metapred <- function(object, newdata = NULL, type = "response", recal.in
   object$FUN$predFUN(object = object, newdata = newdata, type = type, ...)
 }
 
+# @Valentijn: argument perfFUN is not used here
 modelStep <- function(data.list, ccs, estFUN, perfFUN, metaFUN, meta.method, genFUN, cl = NULL, cl.name = NULL, drop = TRUE, ...) {
   if (isTRUE(is.null(cl))) cl <- seq_len(length(data.list))
   if (isTRUE(is.null(cl.name))) cl.name <- as.character(cl)
@@ -372,6 +392,13 @@ urma <- function(b, v, method = "REML", ...)
   list(b = meta.b, v = meta.v, se = meta.se)
 }
 
+
+#' Extract the regression coefficients
+#' The \code{coef} function extracts the estimated model coefficients from objects of class \code{"metapred"}.
+#' @param object A fitted \code{metapred} object
+#' @param \ldots Optional arguments (currently not supported).
+#' 
+#' @method coef metapred
 #' @export
 coef.metapred <- function(object, ...)
   object$coefficients

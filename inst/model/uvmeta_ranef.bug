@@ -6,8 +6,8 @@ model {
 	}
 
 	#prior distributions
-	mu ~ dnorm(hp.mu.mean,hp.mu.prec)
-	tau ~ dunif(0,100)
+	mu ~ dnorm(hp.mu.mean, hp.mu.prec)
+	tau ~ dunif(hp.tau.min, hp.tau.max)
 	tausq <- tau*tau
 	prec <- 1/(tausq)
 
