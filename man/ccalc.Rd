@@ -5,7 +5,7 @@
 \title{Calculate the concordance statistic}
 \usage{
 ccalc(cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv, sd.LP, N, O, Po,
-  data, slab, g = NULL, level = 0.95, approx.se.method = 4, ...)
+  data, slab, subset, g = NULL, level = 0.95, approx.se.method = 4, ...)
 }
 \arguments{
 \item{cstat}{vector to specify the estimated c-statistics.}
@@ -21,7 +21,7 @@ ccalc(cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv, sd.LP, N, O, Po,
 
 \item{sd.LP}{vector to specify the standard deviations of the linear predictor (prognostic index).}
 
-\item{N}{vector to specify the validation study sizes.}
+\item{N}{vector to specify the sample/group sizes.}
 
 \item{O}{vector to specify the total number of observed events.}
 
@@ -30,6 +30,8 @@ ccalc(cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv, sd.LP, N, O, Po,
 \item{data}{optional data frame containing the variables given to the arguments above.}
 
 \item{slab}{optional vector with labels for the studies.}
+
+\item{subset}{optional vector indicating the subset of studies that should be used. This can be a logical vector or a numeric vector indicating the indices of the studies to include.}
 
 \item{g}{a quoted string that is the function to transform estimates of the c-statistic; see the details below.}
 
@@ -54,7 +56,7 @@ An array with the following columns:
 }
 }
 \description{
-The function calculates the (logit transformed) concordance (c-) statistic with the corresponding sampling variance.
+The function calculates (transformed versions of) the concordance (c-) statistic with the corresponding sampling variance.
 }
 \details{
 The c-statistic is a measure of discrimination, and indicates the ability of a prediction model to 
@@ -92,19 +94,21 @@ ccalc(cstat=c.index, cstat.se=se.c.index, cstat.cilb=c.index.95CIl, cstat.ciub=c
                                                             
 }
 \references{
-\itemize{
-\item Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review 
+Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review 
 and meta-analysis of prediction model performance. \emph{BMJ}. 2017; 356:i6460.
-\item Hanley JA, McNeil BJ. The meaning and use of the area under a receiver operating characteristic (ROC) 
+
+Hanley JA, McNeil BJ. The meaning and use of the area under a receiver operating characteristic (ROC) 
 curve. \emph{Radiology}. 1982; 143(1):29--36.
-\item Newcombe RG. Confidence intervals for an effect size measure based on the Mann-Whitney statistic. 
+
+Newcombe RG. Confidence intervals for an effect size measure based on the Mann-Whitney statistic. 
 Part 2: asymptotic methods and evaluation. \emph{Stat Med}. 2006; 25(4):559--73.
-\item Snell KI, Ensor J, Debray TP, Moons KG, Riley RD. Meta-analysis of prediction model performance across 
+
+Snell KI, Ensor J, Debray TP, Moons KG, Riley RD. Meta-analysis of prediction model performance across 
 multiple studies: Which scale helps ensure between-study normality for the C -statistic and calibration measures? 
 \emph{Statistical Methods in Medical Research}. 2017. 
-\item White IR, Rapsomaniki E, the Emerging Risk Factors Collaboration. Covariate-adjusted measures of discrimination 
-for survival data. \emph{Biom J}. 2015;57(4):592--613. 
-}
+
+White IR, Rapsomaniki E, the Emerging Risk Factors Collaboration. Covariate-adjusted measures of discrimination 
+for survival data. \emph{Biom J}. 2015;57(4):592--613.
 }
 \author{
 Thomas Debray <thomas.debray@gmail.com>

@@ -4,26 +4,31 @@
 \alias{forest}
 \title{Forest plot}
 \usage{
-forest(theta, theta.ci, theta.slab, theta.summary, theta.summary.ci,
-  theta.summary.pi = c(NA, NA), title, sort = "asc", theme = theme_bw(),
+forest(theta, theta.ci.lb, theta.ci.ub, theta.slab, theta.summary,
+  theta.summary.ci.lb, theta.summary.ci.ub, theta.summary.pi.lb,
+  theta.summary.pi.ub, title, sort = "asc", theme = theme_bw(),
   predint.linetype = 1, xlim, xlab = "", refline = 0,
-  label.summary = "Summary Estimate", ...)
+  label.summary = "Summary Estimate", label.predint = "Prediction Interval",
+  ...)
 }
 \arguments{
 \item{theta}{Numeric vector with effect size for each study}
 
-\item{theta.ci}{Two-dimensional array specifying the lower bound (first column) and upper bound (second column) of the 
-confidence interval of the effect sizes}
+\item{theta.ci.lb}{Numeric vector specifying the lower bound of the confidence interval of the effect sizes}
+
+\item{theta.ci.ub}{Numeric vector specifying the upper bound of the confidence interval of the effect sizes}
 
 \item{theta.slab}{Character vector specifying the study labels}
 
 \item{theta.summary}{Meta-analysis summary estimate of the effect sizes}
 
-\item{theta.summary.ci}{Numeric vector specifying the lower bound (first item) and upper bound (second item) of the 
-confidence interval of the summary estimate}
+\item{theta.summary.ci.lb}{Lower bound of the confidence (or credibility) interval of the summary estimate}
 
-\item{theta.summary.pi}{Numeric vector specifying the lower bound (first item) and upper bound (second item) of the 
-prediction interval of the summary estimate.}
+\item{theta.summary.ci.ub}{Upper bound of the confidence (or credibility) interval of the summary estimate}
+
+\item{theta.summary.pi.lb}{Lower bound of the (approximate) prediction interval of the summary estimate.}
+
+\item{theta.summary.pi.ub}{Upper bound of the (approximate) prediction interval of the summary estimate.}
 
 \item{title}{Title of the forest plot}
 
@@ -42,6 +47,8 @@ See \link[ggplot2]{theme_bw} for more information.}
 \item{refline}{Optional numeric specifying a reference line}
 
 \item{label.summary}{Optional character string specifying the label for the summary estimate}
+
+\item{label.predint}{Optional character string specifying the label for the (approximate) prediction interval}
 
 \item{\dots}{Additional arguments, which are currently ignored.}
 }

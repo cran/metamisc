@@ -84,8 +84,8 @@
 ##' }
 #' @author Thomas Debray <thomas.debray@gmail.com>
 #' 
-#' @references Debray TPA, Moons KGM, Riley RD. Detecting small-study effects and funnel plot asymmetry in 
-#' meta-analysis of survival data: a comparison of new and existing tests. \emph{Res Syn Meth}. 2017.\cr
+#' @references Debray TPA, Moons KGM, Riley RD. Detecting small-study effects and funnel plot asymmetry in meta-analysis of 
+#' survival data: a comparison of new and existing tests. Res Syn Meth. 2018;9(1):41--50.\cr
 #' \cr
 #' Egger M, Davey Smith G, Schneider M, Minder C. Bias in meta-analysis detected by a simple, graphical test. 
 #' \emph{BMJ}. 1997;315(7109):629--34. \cr

@@ -1,6 +1,6 @@
 #' Calculate the concordance statistic
 #'
-#' The function calculates the (logit transformed) concordance (c-) statistic with the corresponding sampling variance. 
+#' The function calculates (transformed versions of) the concordance (c-) statistic with the corresponding sampling variance. 
 #' 
 #' @param cstat vector to specify the estimated c-statistics.
 #' @param cstat.se vector to specify the corresponding standard errors.
@@ -9,11 +9,12 @@
 #' @param cstat.cilv vector to specify the levels of aformentioned confidence interval limits. 
 #' (default: 0.95, which corresponds to the 95\% confidence interval).
 #' @param sd.LP vector to specify the standard deviations of the linear predictor (prognostic index).
-#' @param N vector to specify the validation study sizes.
+#' @param N vector to specify the sample/group sizes.
 #' @param O vector to specify the total number of observed events.
 #' @param Po vector to specify the observed event probabilities.
 #' @param data optional data frame containing the variables given to the arguments above.
 #' @param slab optional vector with labels for the studies.
+#' @param subset optional vector indicating the subset of studies that should be used. This can be a logical vector or a numeric vector indicating the indices of the studies to include.
 #' @param g a quoted string that is the function to transform estimates of the c-statistic; see the details below.
 #' @param level level for confidence interval, default \code{0.95}.
 #' @param approx.se.method integer specifying which method should be used for estimating the standard error of the
@@ -43,19 +44,21 @@
 #' }
 #' 
 #' @references 
-#' \itemize{
-#' \item Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review 
+#' Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review 
 #' and meta-analysis of prediction model performance. \emph{BMJ}. 2017; 356:i6460.
-#' \item Hanley JA, McNeil BJ. The meaning and use of the area under a receiver operating characteristic (ROC) 
+#' 
+#' Hanley JA, McNeil BJ. The meaning and use of the area under a receiver operating characteristic (ROC) 
 #' curve. \emph{Radiology}. 1982; 143(1):29--36.
-#' \item Newcombe RG. Confidence intervals for an effect size measure based on the Mann-Whitney statistic. 
+#' 
+#' Newcombe RG. Confidence intervals for an effect size measure based on the Mann-Whitney statistic. 
 #' Part 2: asymptotic methods and evaluation. \emph{Stat Med}. 2006; 25(4):559--73.
-#' \item Snell KI, Ensor J, Debray TP, Moons KG, Riley RD. Meta-analysis of prediction model performance across 
+#' 
+#' Snell KI, Ensor J, Debray TP, Moons KG, Riley RD. Meta-analysis of prediction model performance across 
 #' multiple studies: Which scale helps ensure between-study normality for the C -statistic and calibration measures? 
 #' \emph{Statistical Methods in Medical Research}. 2017. 
-#' \item White IR, Rapsomaniki E, the Emerging Risk Factors Collaboration. Covariate-adjusted measures of discrimination 
+#' 
+#' White IR, Rapsomaniki E, the Emerging Risk Factors Collaboration. Covariate-adjusted measures of discrimination 
 #' for survival data. \emph{Biom J}. 2015;57(4):592--613. 
-#' }
 #' 
 #' 
 #' @return An array with the following columns:
@@ -88,7 +91,7 @@
 #' 
 #' @export
 #' 
-ccalc <- function(cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv, sd.LP, N, O, Po, data, slab, 
+ccalc <- function(cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv, sd.LP, N, O, Po, data, slab, subset,
                   g=NULL, level=0.95, approx.se.method=4, ...) {
   
   ### check if data argument has been specified
@@ -113,6 +116,8 @@ ccalc <- function(cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv, sd.LP, N,
   
   mf.slab       <- mf[[match("slab",   names(mf))]]
   slab          <- eval(mf.slab,   data, enclos=sys.frame(sys.parent()))
+  mf.subset     <- mf[[match("subset", names(mf))]]
+  subset        <- eval(mf.subset, data, enclos=sys.frame(sys.parent()))
   mf.cstat      <- mf[[match("cstat", names(mf))]]
   cstat         <- eval(mf.cstat, data, enclos=sys.frame(sys.parent()))
   mf.cstat.se   <- mf[[match("cstat.se", names(mf))]]
@@ -131,6 +136,8 @@ ccalc <- function(cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv, sd.LP, N,
   O             <- eval(mf.O, data, enclos=sys.frame(sys.parent()))
   mf.Po         <- mf[[match("Po", names(mf))]]
   Po            <- eval(mf.Po, data, enclos=sys.frame(sys.parent()))
+
+  
   
   #######################################################################################
   # Count number of studies
@@ -158,6 +165,44 @@ ccalc <- function(cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv, sd.LP, N,
   }
   
   if (k<1) stop("No data provided!")
+  
+  if(is.null(cstat)) {
+    cstat <- rep(NA, times=k)
+  }
+  
+  #######################################################################################
+  # Assign study labels
+  # taken from escalc
+  #######################################################################################
+  if (!is.null(slab)) {
+    
+    if (!is.null(subset))
+      slab <- slab[subset]
+    
+    if (anyNA(slab))
+      stop("NAs in study labels.")
+    
+    if (class(slab)=="factor") {
+      slab <- as.character(slab)
+    }
+    
+    ### check if study labels are unique; if not, make them unique
+    
+    if (anyDuplicated(slab))
+      slab <- make.unique(slab)
+    
+    if (length(slab) != k)
+      stop("Study labels not of same length as data.")
+    
+    ### add slab attribute to the cstat vector
+    attr(cstat, "slab") <- slab
+  }
+  
+  ### if a subset of studies is specified (note: subsetting of other parts already done above, so yi/vi/ni.u/slab are already subsetted)
+  if (!is.null(subset)) {
+    if (!no.data)
+      data <- data[subset,,drop=FALSE]
+  }
   
   #######################################################################################
   # Prepare data
@@ -232,13 +277,16 @@ ccalc <- function(cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv, sd.LP, N,
     # Store results, and method for calculating SE
     ds <- data.frame(theta=theta, theta.se=sqrt(theta.var), theta.CIl=theta.cil, theta.CIu=theta.ciu, 
                      theta.source=theta.source, theta.se.source=theta.var.source)
+  
     
-    
-    # Assing study labels as rownames
-    if(!missing(slab)) {
+    if(is.null(slab) & !no.data) {
+      slab <- rownames(data)
+      rownames(ds) <- slab
+    } else if (!is.null(slab)) {
       slab <- make.unique(as.character(slab))
       rownames(ds) <- slab
     }
+    
     
     return(ds)
 }

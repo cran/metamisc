@@ -2,9 +2,7 @@
 % Please edit documentation in R/riley.r
 \name{predict.riley}
 \alias{predict.riley}
-\title{Prediction Interval
-Calculates a prediction interval for the summary parameters of Riley's alternative model for bivariate random-effects 
-meta-analysis. This interval predicts in what range future observations will fall given what has already been observed.}
+\title{Prediction Interval}
 \usage{
 \method{predict}{riley}(object, ...)
 }
@@ -18,7 +16,6 @@ Data frame containing prediction intervals with the summary estimates \code{beta
 (for effect size data), or with the mean sensitivity and false positive rate (for diagnostic test accuracy data).
 }
 \description{
-Prediction Interval
 Calculates a prediction interval for the summary parameters of Riley's alternative model for bivariate random-effects 
 meta-analysis. This interval predicts in what range future observations will fall given what has already been observed.
 }

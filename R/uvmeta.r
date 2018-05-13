@@ -29,6 +29,7 @@
 #' \code{hp.mu.var} (Hyperparameter: variance of the prior distribution of the fixed/random effects model, defaults to 1000),
 #' \code{hp.tau.min} (Hyperparameter: mininum value for the between-study standard deviation, defaults to 0),
 #' \code{hp.tau.max} (Hyperparameter: maximum value for the between-study standard deviation, defaults to 100).
+#' @param ret.fit logical indicating whether the full results from the fitted model should also be returned.
 #' @param verbose If TRUE then messages generated during the fitting process will be displayed.
 #' @param \dots Additional arguments that are passed to \pkg{rma} or \pkg{runjags} (if \code{method="BAYES"}).
 #' 
@@ -50,9 +51,21 @@
 #' standard deviation is given by a uniform distribution, by default bounded between 0 and 100. 
 #' }
 #' 
-#' @return An object of the class \code{uvmeta} for which many standard methods are available. If \code{method="BAYES"}, 
-#' the results contain an object of class \link[runjags]{runjags}. Otherwise, the results contain an object of 
-#' class \link[metafor]{rma}
+#' @return An object of the class \code{uvmeta} for which many standard methods are available.
+#' \describe{
+##'  \item{"data"}{array with (transformed) data used for meta-analysis, and method(s) used for restoring missing information. }
+##'  \item{"method"}{character string specifying the meta-analysis method.}
+##'  \item{"est"}{estimated performance statistic of the model. For Bayesian meta-analysis, the posterior median is returned.}
+##'  \item{"se"}{standard error (or posterior standard deviation) of the summary estimate.}
+##'  \item{"tau2"}{estimated amount of (residual) heterogeneity. Always 0 when method=\code{"FE"}. For Bayesian meta-analysis, the posterior median is returned.}
+##'  \item{"se.tau2"}{estimated standard error (or posterior standard deviation) of the between-study variation.}
+##'  \item{"ci.lb"}{lower bound of the confidence (or credibility) interval of the summary estimate}
+##'  \item{"ci.ub"}{upper bound of the confidence (or credibility) interval of the summary estimate}
+##'  \item{"pi.lb"}{lower bound of the (approximate) prediction interval of the summary estimate}
+##'  \item{"pi.ub"}{upper bound of the (approximate) prediction interval of the summary estimate}
+##'  \item{"fit"}{the full results from the fitted model}
+##'  \item{"slab"}{vector specifying the label of each study.}
+##' }
 #' 
 #' @references \itemize{
 #' \item Biggerstaff BJ, Tweedie RL. Incorporating variability in estimates of heterogeneity in the random effects model 
@@ -95,12 +108,12 @@
 #' @export
 
 uvmeta <- function(r, r.se, method="REML", test="knha", labels, na.action, 
-                   n.chains=4, pars, verbose=FALSE, ...) 
+                   n.chains=4, pars, ret.fit=FALSE, verbose=FALSE, ...) 
   UseMethod("uvmeta")
 
 #' @export
 uvmeta.default <- function(r, r.se, method="REML", test="knha", labels, na.action, 
-                           n.chains=4, pars, verbose=FALSE, ...)
+                           n.chains=4, pars, ret.fit=FALSE, verbose=FALSE, ...)
 {
   out <- list()
   out$call <- match.call()
@@ -191,14 +204,21 @@ uvmeta.default <- function(r, r.se, method="REML", test="knha", labels, na.actio
   if (method != "BAYES") { 
     fit <- rma(yi=r, sei=r.se, method=method, test=test, slab=out$slab, ...) 
     preds <- predict(fit, level=pars.default$level)
-    cr.lb <- ifelse(method=="FE", NA, preds$cr.lb)
-    cr.ub <- ifelse(method=="FE", NA, preds$cr.ub)
-    results <- c(coefficients(fit), sqrt(vcov(fit)), fit$tau2, fit$se.tau2, c(preds$ci.lb, preds$ci.ub, cr.lb, cr.ub))
-    names(results) <- c("estimate", "SE", "tau2", "se.tau2", "CIl", "CIu", "PIl", "PIu")
     
-    out$rma <- fit
+    # We don't use the prediction intervals from metafor, as they are based on a Normal distribution
+    predint <- calcPredInt(coefficients(fit), sigma2=fit$se**2, tau2=fit$tau2, k=fit$k, level=pars.default$level)
+    
+    out$est <- as.numeric(coefficients(fit))
+    out$se  <- fit$se
+    out$tau2 <- fit$tau2
+    out$se.tau2 <- fit$se.tau2
+    out$ci.lb <- preds$ci.lb
+    out$ci.ub <- preds$ci.ub
+    out$pi.lb <- ifelse(method=="FE", preds$ci.lb, predint$lower)
+    out$pi.ub <- ifelse(method=="FE", preds$ci.ub, predint$upper)
+
+    out$fit <- ifelse(ret.fit, fit, NA)
     out$numstudies <- fit$k
-    out$results <- results
     
   } else if (method == "BAYES") { 
     results.overview <- as.data.frame(array(NA,dim=c(2, length(quantiles)+2)))
@@ -226,6 +246,18 @@ uvmeta.default <- function(r, r.se, method="REML", test="knha", labels, na.actio
                                     inits=inits,
                                     confidence=out$level,
                                     ...)
+    # Check if model converged
+    psrf.ul <-  jags.model$psrf$psrf[,"Upper C.I."]
+    psrf.target <- jags.model$psrf$psrf.target
+    
+    if(sum(psrf.ul > psrf.target)>1) {
+      warning(paste("Model did not properly converge! The upper bound of the convergence diagnostic (psrf) exceeds", 
+                    psrf.target, "for the parameters", 
+                    paste(rownames(jags.model$psrf$psrf)[which(psrf.ul > psrf.target)], " (psrf=", 
+                          round(jags.model$psrf$psrf[which(psrf.ul > psrf.target),2],2), ")", collapse=", ", sep=""),
+                    ". Consider re-running the analysis by increasing the optional arguments 'adapt', 'burnin' and/or 'sample'.", sep=""))
+    }
+    
     fit <- jags.model$summaries
     
     #Extract PED
@@ -233,12 +265,16 @@ uvmeta.default <- function(r, r.se, method="REML", test="knha", labels, na.actio
     
     txtLevel <- (out$level*100)
     
-    results <- c(fit["mu",c("Mean","SD")], fit["tausq",c("Mean","SD")], fit["mu", paste(c("Lower", "Upper"), txtLevel, sep="")], fit["theta.new",  paste(c("Lower", "Upper"), txtLevel, sep="")])
-    names(results) <- c("estimate", "SE", "tau2", "se.tau2", "CIl", "CIu", "PIl", "PIu")
-
-    out$runjags <- jags.model
+    out$est <- fit["mu", "Median"]
+    out$se  <- fit["mu", "SD"]
+    out$tau2 <- fit["tausq", "Median"]
+    out$se.tau2 <- fit["tausq", "SD"]
+    out$ci.lb <- fit["mu", paste("Lower", txtLevel, sep="")]
+    out$ci.ub <- fit["mu", paste("Upper", txtLevel, sep="")]
+    out$pi.lb <- fit["theta.new",  paste("Lower", txtLevel, sep="")]
+    out$pi.ub <- fit["theta.new",  paste("Upper", txtLevel, sep="")]
+    out$fit <- out$fit <- ifelse(ret.fit, jags.model, NA)
     out$PED <- sum(fit.dev$deviance)+sum(fit.dev$penalty)
-    out$results <- results
   }
   #attr(out$results,"level") <- pars.default$level
   out$data <- ds
@@ -296,10 +332,14 @@ plot.uvmeta <- function(x, sort="asc", ...) {
   yi <- c(x$data[,"theta"])
   yi.slab <- c(as.character(x$slab))
   
-  forest(theta=yi, theta.ci=yi.ci, theta.slab=yi.slab, 
-         theta.summary=x$results["estimate"], 
-         theta.summary.ci=x$results[c("CIl","CIu")], 
-         theta.summary.pi=x$results[c("PIl","PIu")], 
+  forest(theta=yi, 
+         theta.ci.lb=yi.ci[,1], theta.ci.ub=yi.ci[,2],
+         theta.slab=yi.slab, 
+         theta.summary=x$est, 
+         theta.summary.ci.lb=x$ci.lb,
+         theta.summary.ci.ub=x$ci.ub,
+         theta.summary.pi.lb=x$pi.lb,
+         theta.summary.pi.ub=x$pi.ub,
          sort=sort, ...)
 }
 
@@ -309,8 +349,6 @@ plot.uvmeta <- function(x, sort="asc", ...) {
 #' @export
 print.uvmeta <- function(x, ...)
 {
-  out <- (x$results)[c("estimate", "CIl", "CIu")]
-  
   text.model <- if (x$method=="FE") "Fixed" else "Random"
   text.ci <- if(x$method=="BAYES") "credibility" else "confidence"
   text.pi <- if(x$method=="BAYES") "" else "(approximate)"
@@ -318,28 +356,12 @@ print.uvmeta <- function(x, ...)
   if (x$method!="FE") {
     cat(paste("Summary estimate with ", x$level*100, "% ", text.ci, " and ", text.pi, " ", 
               x$level*100, "% prediction interval:\n\n", sep=""))
-    print((x$results)[c("estimate", "CIl", "CIu", "PIl", "PIu")])
+    results=c(Estimate=x$est, CIl=x$ci.lb, CIu=x$ci.ub, PIl=x$pi.lb, PIu=x$pi.ub)
   } else {
     cat(paste("Summary estimate with ", x$level*100, "% ", text.ci, ":\n\n", sep=""))
-    print((x$results)[c("estimate", "CIl", "CIu")])
+    results=c(Estimate=x$est, CIl=x$ci.lb, CIu=x$ci.ub)
   }
-  if (x$method=="BAYES") {
-    cat(paste("\nPenalized expected deviance: ", round(x$PED,3),"\n"))
-    
-    # Check if model converged
-    psrf.ul <-  x$runjags$psrf$psrf[,"Upper C.I."]
-    psrf.target <- x$runjags$psrf$psrf.target
-    
-    if(sum(psrf.ul > psrf.target)>1) {
-      warning(paste("Model did not properly converge! The upper bound of the convergence diagnostic (psrf) exceeds", 
-                    psrf.target, "for the parameters", 
-                    paste(rownames(x$runjags$psrf$psrf)[which(psrf.ul > psrf.target)], " (psrf=", 
-                          round(x$runjags$psrf$psrf[which(psrf.ul > psrf.target),2],2), ")", collapse=", ", sep=""),
-                    ". Consider re-running the analysis by increasing the optional arguments 'adapt', 'burnin' and/or 'sample'.", sep=""))
-    }
-  }
-  
-	out
+  print(results)
 }
 
 #' Summarizing Univariate Meta-Analysis Models
@@ -366,10 +388,10 @@ summary.uvmeta <- function(object, ...)
 {
     cat("Call:\n")
     print(object$call)
-    if (object$method=="FE")  cat(paste("\nFixed effects summary:\t",round(object$results["estimate"],5))," (SE: ",round(object$results["SE"],5), ")",sep="")
+    if (object$method=="FE")  cat(paste("\nFixed effects summary:\t",round(object$est,5))," (SE: ",round(object$se,5), ")",sep="")
     if (object$method!="FE") {
-        cat(paste("\nRandom effects summary:\t",round(object$results["estimate"],5))," (SE: ",round(object$results["SE"],5), ")",sep="")
-        cat(paste("\nTau squared: \t\t",round(object$results["tau2"],5))," (SE: ",round(object$results["se.tau2"],5), ")",sep="")
+        cat(paste("\nRandom effects summary:\t",round(object$est,5))," (SE: ",round(object$se,5), ")",sep="")
+        cat(paste("\nTau squared: \t\t",round(object$tau2,5))," (SE: ",round(object$se.tau2,5), ")",sep="")
     }
 }
 

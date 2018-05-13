@@ -5,7 +5,7 @@
 \title{Univariate meta-analysis}
 \usage{
 uvmeta(r, r.se, method = "REML", test = "knha", labels, na.action,
-  n.chains = 4, pars, verbose = FALSE, ...)
+  n.chains = 4, pars, ret.fit = FALSE, verbose = FALSE, ...)
 }
 \arguments{
 \item{r}{Vector of numerics containing the effect size of each study}
@@ -38,14 +38,28 @@ The following parameters configure the MCMC sampling procedure:
 \code{hp.tau.min} (Hyperparameter: mininum value for the between-study standard deviation, defaults to 0),
 \code{hp.tau.max} (Hyperparameter: maximum value for the between-study standard deviation, defaults to 100).}
 
+\item{ret.fit}{logical indicating whether the full results from the fitted model should also be returned.}
+
 \item{verbose}{If TRUE then messages generated during the fitting process will be displayed.}
 
 \item{\dots}{Additional arguments that are passed to \pkg{rma} or \pkg{runjags} (if \code{method="BAYES"}).}
 }
 \value{
-An object of the class \code{uvmeta} for which many standard methods are available. If \code{method="BAYES"}, 
-the results contain an object of class \link[runjags]{runjags}. Otherwise, the results contain an object of 
-class \link[metafor]{rma}
+An object of the class \code{uvmeta} for which many standard methods are available.
+\describe{
+ \item{"data"}{array with (transformed) data used for meta-analysis, and method(s) used for restoring missing information. }
+ \item{"method"}{character string specifying the meta-analysis method.}
+ \item{"est"}{estimated performance statistic of the model. For Bayesian meta-analysis, the posterior median is returned.}
+ \item{"se"}{standard error (or posterior standard deviation) of the summary estimate.}
+ \item{"tau2"}{estimated amount of (residual) heterogeneity. Always 0 when method=\code{"FE"}. For Bayesian meta-analysis, the posterior median is returned.}
+ \item{"se.tau2"}{estimated standard error (or posterior standard deviation) of the between-study variation.}
+ \item{"ci.lb"}{lower bound of the confidence (or credibility) interval of the summary estimate}
+ \item{"ci.ub"}{upper bound of the confidence (or credibility) interval of the summary estimate}
+ \item{"pi.lb"}{lower bound of the (approximate) prediction interval of the summary estimate}
+ \item{"pi.ub"}{upper bound of the (approximate) prediction interval of the summary estimate}
+ \item{"fit"}{the full results from the fitted model}
+ \item{"slab"}{vector specifying the label of each study.}
+}
 }
 \description{
 This function summarizes multiple estimates for a single parameter by assuming a fixed (i.e. common) 
