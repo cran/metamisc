@@ -1,3 +1,24 @@
+## Note by Valentijn: I can't seem to make it pass all the checks for  forest.numeric or forest.default 
+# (by Thomas, below) work without making a generic method. But that masks the generic from metafor. 
+# The issue is that i was trying to unmask the generic from metafor...
+
+#' Forest plot
+#' 
+#' Generate a forest plot by specifying the various effect sizes, confidence intervals and summary estimate.
+#' 
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' @author Valentijn de Jong <Valentijn.M.T.de.Jong@gmail.com>
+#' 
+#' @param \dots Additional arguments, which are currently ignored.
+#' 
+#' @details This is a generic function. See \link{forest.default} for making forest plots of summary statistics,
+#' \link{forest.metapred} for plotting \link{metapred} objects, and \link{forest.mp.cv.val} for plotting 
+#' \code{mp.cv.val} objects. 
+#' 
+#' @export forest
+forest <- function(...)
+  UseMethod("forest")
+
 #' Forest plot
 #' 
 #' Generate a forest plot by specifying the various effect sizes, confidence intervals and summary estimate.
@@ -14,7 +35,7 @@
 #' @param sort By default, studies are sorted by ascending effect size (\code{sort="asc"}). Set to \code{"desc"} for 
 #' sorting in reverse order, or any other value to ignore sorting.
 #' @param theme Theme to generate the forest plot. By default, the classic dark-on-light ggplot2 theme is used. 
-#' See \link[ggplot2]{theme_bw} for more information.
+#' See \link[ggplot2]{ggtheme} for more information.
 #' @param predint.linetype The linetype of the prediction interval
 #' @param xlim The \code{x} limits \code{(x1, x2)} of the forest plot
 #' @param xlab Optional character string specifying the X label
@@ -25,8 +46,17 @@
 #' 
 #' @author Thomas Debray <thomas.debray@gmail.com>
 #' 
+#' @method forest default
+#' 
+#' @return An object of class \code{ggplot}
+#' 
+#' @import metafor
+#' @import ggplot2
+#' @importFrom stats reorder
+#' 
 #' @export
-forest <- function (theta, 
+# This could also be named forest.numeric
+forest.default <- function (theta, 
                     theta.ci.lb,
                     theta.ci.ub,
                     theta.slab, 
@@ -43,13 +73,14 @@ forest <- function (theta,
                     label.summary = "Summary Estimate", 
                     label.predint = "Prediction Interval",
                     ...) {
+  requireNamespace("ggplot2")
 
   if (missing(theta)) stop("Study effect sizes are missing!")
   if (missing(theta.ci.lb) | missing(theta.ci.ub)) stop("Confidence intervals of effect sizes missing!")
   if (missing(theta.slab)) stop("Study labels are missing!")
   
   num.studies <- unique(c(length(theta), length(theta.ci.lb), length(theta.ci.ub), length(theta.slab)))
-  if (length(num.studies)>1) stop(paste("Mismatch in data dimensions!"))
+  if (length(num.studies)>1) stop(paste("Too few studies for a forest plot!"))
   
   
   #Extract data
@@ -83,17 +114,17 @@ forest <- function (theta,
     
   
   
-  #Sort data
+  # Determine ordering
   if (sort=="asc") {
     i.index <- order(yi)
   } else if (sort=="desc") {
-    i.index <- order(yi, decreasing=TRUE)
+    i.index <- order(yi, decreasing = TRUE)
   } else {
     i.index <- 1:length(yi)
   }
   
   
-  # Add meta-analysis results
+  # Order the study results
   scat  <- rep(1, num.studies) #indicator variable for data points
   slab  <- slab[i.index]
   yi    <- yi[i.index]
@@ -158,21 +189,58 @@ forest <- function (theta,
     g3$pi.upper <- theta.summary.pi.ub
     g3$pi.lower <- theta.summary.pi.lb
     
-    # Prediction interval
+    # Add (approximate) prediction interval
     if (add.predint) {
       p <- p + with(g3, geom_errorbar(data=g3, aes(ymin = pi.lower, ymax = pi.upper, x=label.predint), 
                                       width = 0.5, size=1.0, linetype=predint.linetype))
     }
     
-    # Confidence interval
+    # Add confidence interval of the summary estimate
     p <- p + with(g2, geom_errorbar(data=g2, aes(ymin = ci.lower, ymax = ci.upper, x=label.summary), width = 0.5, size=1.0))
     
-    # Summary estimate
+    # Add summary estimate
     p <- p + with(g2, geom_point(data=g2, shape=23, size=3, fill="white"))
   }
   
 
   p
+}
+
+#' Forest Plots
+#' 
+#' Function to create forest plots for objects of class \code{"mm_perf"}.
+#' 
+#' @param x An object of class \code{"mm_perf"}
+#' @param \ldots Additional arguments which are passed to \link{forest}.
+#' 
+#' @details The forest plot shows the performance estimates of each study with corresponding confidence 
+#' intervals. 
+#' 
+#' @references 
+#' Lewis S, Clarke M. Forest plots: trying to see the wood and the trees. \emph{BMJ}. 2001; 322(7300):1479--80.
+#' 
+#' @examples 
+#' data(EuroSCORE)
+#' 
+#' # Calculate the c-statistic and its standard error
+#' est1 <- ccalc(cstat = c.index, cstat.se = se.c.index, cstat.cilb = c.index.95CIl, 
+#'               cstat.ciub = c.index.95CIu, N = n, O = n.events, data = EuroSCORE, slab = Study)
+#' plot(est1)
+#' 
+#' # Calculate the total O:E ratio and its standard error
+#' est2 <- oecalc(O = n.events, E = e.events, N = n, data = EuroSCORE, slab = Study)
+#' plot(est2)
+#' 
+#' @keywords forest
+#'             
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' 
+#' @return An object of class \code{ggplot}
+#' 
+#' @method plot mm_perf
+#' @export
+plot.mm_perf <- function(x, ...) {
+  forest(theta = x$theta, theta.ci.lb = x$theta.cilb, theta.ci.ub = x$theta.ciub, theta.slab = rownames(x), ...)
 }
 
 # Multiple plot function

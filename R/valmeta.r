@@ -12,13 +12,17 @@
 #' (meta-analysis of the total observed-expected ratio). See `Details' for more information.
 #' @param cstat Optional vector with the estimated c-statistic for each valiation
 #' @param cstat.se Optional vector with the standard error of the estimated c-statistics
-#' @param cstat.95CI Optional 2-dimensional array with the lower (first column) and upper (second column) boundary 
-#' of the 95\% confidence interval of the estimated c-statistics
+#' @param cstat.cilb Optional vector to specify the lower limits of the confidence interval.
+#' @param cstat.ciub Optional vector to specify the upper limits of the confidence interval.
+#' @param cstat.cilv Optional vector to specify the levels of aformentioned confidence interval limits. 
+#' (default: 0.95, which corresponds to the 95\% confidence interval).
 #' @param sd.LP Optional vector with the standard deviation of the linear predictor (prognostic index)
 #' @param OE Optional vector with the estimated ratio of total observed versus total expected events
 #' @param OE.se Optional vector with the standard errors of the estimated O:E ratios
-#' @param OE.95CI Optional 2-dimensional array with the lower (first column) and upper (second column) boundary 
-#' of the 95\% confidence interval of the total O:E ratios
+#' @param OE.cilb Optional vector to specify the lower limits of the confidence interval for \code{OE}.
+#' @param OE.ciub Optional vector to specify the upper limits of the confidence interval for \code{OE}.
+#' @param OE.cilv Optional vector to specify the levels of aformentioned confidence interval limits. 
+#' (default: 0.95, which corresponds to the 95\% confidence interval).
 #' @param citl Optional vector with the estimated calibration-in-the-large for each valiation
 #' @param citl.se Optional vector with the standard error of the estimated calibration-in-the-large statistics
 #' @param N Optional vector with the total number of participants for each valiation
@@ -31,6 +35,7 @@
 #' @param Po.se Optional vector with the standard errors of \code{Po}.
 #' @param Pe Optional vector with the (cumulative) expected event probability for each validation
 #' (if specified, during time \code{t.val})
+#' @param data optional data frame containing the variables given to the arguments above.
 #' @param method Character string specifying whether a fixed- or a random-effects model should be fitted. 
 #' A fixed-effects model is fitted when using \code{method="FE"}. Random-effects models are fitted by setting method 
 #' equal to one of the following: \code{"REML"} (Default), \code{"DL"}, \code{"HE"}, \code{"SJ"}, \code{"ML"}, 
@@ -137,28 +142,28 @@
 #' data(EuroSCORE)
 #' 
 #' # Meta-analysis of the c-statistic (random effects)
-#' fit <- with(EuroSCORE, valmeta(cstat=c.index, cstat.se=se.c.index, 
-#'                                cstat.95CI=cbind(c.index.95CIl,c.index.95CIu), 
-#'                                N=n, O=n.events, slab=Study))
+#' fit <- valmeta(cstat=c.index, cstat.se=se.c.index, cstat.cilb=c.index.95CIl, 
+#'                cstat.ciub=c.index.95CIu, cstat.cilv=0.95, N=n, O=n.events, 
+#'                slab=Study, data=EuroSCORE)
 #' plot(fit)
 #' 
 #' # Nearly identical results when we need to estimate the SE
-#' with(EuroSCORE, valmeta(cstat=c.index,  N=n, O=n.events, slab=Study))
+#' valmeta(cstat=c.index,  N=n, O=n.events, slab=Study, data=EuroSCORE)
 #' 
 #' # Two-stage meta-analysis of the total O:E ratio (random effects)
-#' with(EuroSCORE, valmeta(measure="OE", O=n.events, E=e.events, N=n))    
-#' with(EuroSCORE, valmeta(measure="OE", O=n.events, E=e.events))        
-#' with(EuroSCORE, valmeta(measure="OE", Po=Po, Pe=Pe, N=n))
-#' 
-#' # One-stage meta-analysis of the total O:E ratio (random effects)
-#' with(EuroSCORE, valmeta(measure="OE", O=n.events, E=e.events, method="ML",
-#'                         pars=list(model.oe="poisson/log")))
+#' valmeta(measure="OE", O=n.events, E=e.events, N=n, data=EuroSCORE)    
+#' valmeta(measure="OE", O=n.events, E=e.events, data=EuroSCORE)       
+#' valmeta(measure="OE", Po=Po, Pe=Pe, N=n, data=EuroSCORE)
 #' 
 #' \dontrun{
+#' # One-stage meta-analysis of the total O:E ratio (random effects)
+#' valmeta(measure="OE", O=n.events, E=e.events, data=EuroSCORE, method="ML", 
+#'         pars=list(model.oe="poisson/log"))
+#' 
 #' # Bayesian random effects meta-analysis of the c-statistic
-#' fit2 <- with(EuroSCORE, valmeta(cstat=c.index, cstat.se=se.c.index, 
-#'                                 cstat.95CI=cbind(c.index.95CIl,c.index.95CIu),
-#'                                 N=n, O=n.events, method="BAYES", slab=Study))
+#' fit2 <- valmeta(cstat=c.index, cstat.se=se.c.index, cstat.cilb=c.index.95CIl,
+#'                 cstat.ciub=c.index.95CIu, cstat.cilb=0.95, N=n, O=n.events, 
+#'                 data=EuroSCORE, method="BAYES", slab=Study)
 #' 
 #' # Bayesian one-stage random effects meta-analysis of the total O:E ratio
 #' # Consider that some (but not all) studies do not provide information on N
@@ -170,8 +175,8 @@
 #'              hp.tau.sigma=1.5,       # Standard deviation for 'hp.tau.dist'
 #'              hp.tau.df=3,            # Degrees of freedom for 'hp.tau.dist'
 #'              hp.tau.max=10)          # Maximum value for the between-study standard deviation
-#' fit3 <- with(EuroSCORE.new, valmeta(measure="OE", O=n.events, E=e.events, N=n, 
-#'         method="BAYES", slab=Study, pars=pars, ret.fit = T))
+#' fit3 <- valmeta(measure="OE", O=n.events, E=e.events, N=n, data=EuroSCORE.new,
+#'         method="BAYES", slab=Study, pars=pars, ret.fit = T)
 #' plot(fit3)
 #' print(fit3$fit$model) # Inspect the JAGS model
 #' print(fit3$fit$data)  # Inspect the JAGS data
@@ -181,7 +186,7 @@
 #' data(Framingham)
 #' 
 #' # Meta-analysis of total O:E ratio after 10 years of follow-up
-#' with(Framingham, valmeta(measure="OE", Po=Po, Pe=Pe, N=n))
+#' valmeta(measure="OE", Po=Po, Pe=Pe, N=n, data=Framingham)
 #' 
 #' @keywords meta-analysis discrimination  calibration
 #' 
@@ -193,36 +198,75 @@
 #' @importFrom stats coef coefficients dnorm glm nobs optim pchisq qnorm qt pt rnorm runif confint poisson
 #' predict vcov as.formula formula model.frame model.frame.default update.formula family
 
-valmeta <- function(measure="cstat", cstat, cstat.se, cstat.95CI, sd.LP, OE, OE.se, OE.95CI, citl, citl.se,
-                    N, O, E, Po, Po.se, Pe, method="REML", test="knha", 
-                    ret.fit = FALSE, verbose=FALSE, slab, n.chains = 4, pars, ...) {
-  pars.default <- list(level = 0.95,
-                       hp.mu.mean = 0, 
-                       hp.mu.var = 1E6,
-                       hp.tau.min = 0,
-                       hp.tau.max = 2,
-                       hp.tau.mean = 0,
-                       hp.tau.sigma = 0.5,
-                       hp.tau.dist = "dunif", 
-                       hp.tau.df = 3, 
-                       correction = 0.5,
-                       method.restore.c.se=4,
-                       model.cstat = "normal/logit", #Alternative: "normal/identity"
-                       model.oe = "normal/log") #Alternative: "poisson/log" or "normal/identity"
+valmeta <- function(measure="cstat", cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv,
+                    sd.LP, OE, OE.se, OE.cilb, OE.ciub, OE.cilv, citl, citl.se, N, O, E, Po, Po.se, Pe, data, 
+                    method="REML", test="knha", ret.fit = FALSE, verbose=FALSE, slab, n.chains = 4, pars, ...) {
   
-  if (!missing(pars)) {
-    for (i in 1:length(pars)) {
-      element <- ls(pars)[i]
-      pars.default[[element]] <- pars[[element]]
-    }
+  pars.default <- .initiateDefaultPars(pars)
+  
+  ### check if data argument has been specified
+  if (missing(data))
+    data <- NULL
+  
+  ### need this at the end to check if append=TRUE can actually be done
+  no.data <- is.null(data)
+  
+  ### check if data argument has been specified
+  if (is.null(data)) {
+    data <- sys.frame(sys.parent())
+  } else {
+    if (!is.data.frame(data))
+      data <- data.frame(data)
   }
+
+  #######################################################################################
+  # Retrieve all data
+  #######################################################################################
+  mf <- match.call()
   
+  mf.slab       <- mf[[match("slab",   names(mf))]]
+  slab          <- eval(mf.slab,   data, enclos=sys.frame(sys.parent()))
+  mf.cstat      <- mf[[match("cstat", names(mf))]]
+  cstat         <- eval(mf.cstat, data, enclos=sys.frame(sys.parent()))
+  mf.cstat.se   <- mf[[match("cstat.se", names(mf))]]
+  cstat.se      <- eval(mf.cstat.se, data, enclos=sys.frame(sys.parent()))
+  mf.cstat.cilb <- mf[[match("cstat.cilb", names(mf))]]
+  cstat.cilb    <- eval(mf.cstat.cilb, data, enclos=sys.frame(sys.parent()))
+  mf.cstat.ciub <- mf[[match("cstat.ciub", names(mf))]]
+  cstat.ciub    <- eval(mf.cstat.ciub, data, enclos=sys.frame(sys.parent()))
+  mf.cstat.cilv <- mf[[match("cstat.cilv", names(mf))]]
+  cstat.cilv    <- eval(mf.cstat.cilv, data, enclos=sys.frame(sys.parent()))
+  mf.sd.LP      <- mf[[match("sd.LP", names(mf))]]
+  sd.LP         <- eval(mf.sd.LP, data, enclos=sys.frame(sys.parent()))
+  mf.OE         <- mf[[match("OE", names(mf))]]
+  OE            <- eval(mf.OE, data, enclos=sys.frame(sys.parent()))
+  mf.OE.se      <- mf[[match("OE.se", names(mf))]]
+  OE.se         <- eval(mf.OE.se, data, enclos=sys.frame(sys.parent()))
+  mf.OE.cilb    <- mf[[match("OE.cilb", names(mf))]]
+  OE.cilb       <- eval(mf.OE.cilb, data, enclos=sys.frame(sys.parent()))
+  mf.OE.ciub    <- mf[[match("OE.ciub", names(mf))]]
+  OE.ciub       <- eval(mf.OE.ciub, data, enclos=sys.frame(sys.parent()))
+  mf.OE.cilv    <- mf[[match("OE.cilv", names(mf))]]
+  OE.cilv       <- eval(mf.OE.cilv, data, enclos=sys.frame(sys.parent()))
+  mf.citl       <- mf[[match("citl", names(mf))]]
+  citl          <- eval(mf.citl, data, enclos=sys.frame(sys.parent()))
+  mf.citl.se    <- mf[[match("citl.se", names(mf))]]
+  citl.se       <- eval(mf.citl.se, data, enclos=sys.frame(sys.parent()))
+  mf.N          <- mf[[match("N", names(mf))]]
+  N             <- eval(mf.N, data, enclos=sys.frame(sys.parent()))
+  mf.O          <- mf[[match("O", names(mf))]]
+  O             <- eval(mf.O, data, enclos=sys.frame(sys.parent()))
+  mf.E          <- mf[[match("E", names(mf))]]
+  E             <- eval(mf.E, data, enclos=sys.frame(sys.parent()))
+  mf.Po         <- mf[[match("Po", names(mf))]]
+  Po            <- eval(mf.Po, data, enclos=sys.frame(sys.parent()))
+  mf.Po.se      <- mf[[match("Po.se", names(mf))]]
+  Po.se         <- eval(mf.Po.se, data, enclos=sys.frame(sys.parent()))
+  mf.Pe         <- mf[[match("Pe", names(mf))]]
+  Pe            <- eval(mf.Pe, data, enclos=sys.frame(sys.parent()))
+
   if (!is.element(measure, c("cstat","OE")))
     stop("Unknown 'measure' specified.")
-  
-  if (pars.default$level < 0 | pars.default$level > 1) {
-    stop ("Invalid value for 'level'!")
-  } 
   
   if (method=="FE") {
     test <- "z" #Do not use SJHK adjustment in a fixed effect MA
@@ -243,95 +287,79 @@ valmeta <- function(measure="cstat", cstat, cstat.se, cstat.95CI, sd.LP, OE, OE.
       stop("Invalid number of chains specified for the Gibbs sampler!")
     }
   }
-    
+  
   #######################################################################################
   # Count number of studies
   #######################################################################################
   k <- 0
-  if (measure=="cstat") {
-    if (!missing(cstat)) {
+  
+  if (!no.data) {
+    k <- dim(data)[1]
+  } else if (measure=="cstat") {
+    if (!is.null(cstat)) {
       k <- length(cstat)
-    } else if (!missing(cstat.se)) {
+    } else if (!is.null(cstat.se)) {
       k <- length(cstat.se)
-    } else if (!missing(cstat.95CI)) {
-      k <- dim(cstat.95CI)[2]
-    } else if (!missing(sd.LP)) {
+    } else if (!is.null(cstat.cilb)) {
+      k <- length(cstat.cilb)
+    } else if (!is.null(cstat.ciub)) {
+      k <- length(cstat.ciub)
+    } else if (!is.null(sd.LP)) {
       k <- length(sd.LP)
     }
   } else if (measure=="OE") {
-    if (!missing(OE)) {
+    if (!is.null(OE)) {
       k <- length(OE)
-    } else if (!missing(OE.se)) {
+    } else if (!is.null(OE.se)) {
       k <- length(OE.se)
-    } else if (!missing(E)) {
+    } else if (!is.null(OE.cilb)) {
+      k <- length(OE.cilb)
+    } else if (!is.null(OE.ciub)) {
+      k <- length(OE.ciub)
+    } else if (!is.null(E)) {
       k <- length(E)
-    } else if (!missing(O)) {
+    } else if (!is.null(O)) {
       k <- length(O)
-    } else if (!missing(Po)) {
+    } else if (!is.null(Po)) {
       k <- length(Po)
-    } else if (!missing(Pe)) {
+    } else if (!is.null(Pe)) {
       k <- length(Pe)
-    } else if (!missing(citl)) {
+    } else if (!is.null(citl)) {
       k <- length(citl)
     }
   }
   
+  if (k<1) stop("No data provided!")
+ 
+
   #######################################################################################
   # Prepare data
   #######################################################################################
-  
-  if (missing(slab))
-    slab <- NULL
-  if (missing(cstat.se))
-    cstat.se <- rep(NA, length=k)
-  if (missing(cstat.95CI)) 
-    cstat.95CI <- array(NA, dim=c(k,2))
-  
-  if (missing(O)) {
-    O <- rep(NA, length=k)
-  }
-  if (missing(Po)) {
-    Po <- rep(NA, length=k)
-  }
-  if (missing(N)) {
-    N <- rep(NA, length=k)
-  }
-  if (missing(sd.LP)) {
-    sd.LP <- rep(NA, length=k)
-  }
-  if (missing(OE)) {
-    OE <- rep(NA, length=k)
-  }
-  if (missing(OE.se)) {
-    OE.se <- rep(NA, length=k)
+  if(is.null(slab) & !no.data) {
+    slab <- rownames(data)
+  } else if (!is.null(slab)) {
+    slab <- make.unique(as.character(slab))
   }
   
-  if (missing(E)) {
-    E <- rep(NA, length=k)
-  }
-  if (missing(Po.se)) {
-    Po.se <- rep(NA, length=k)
-  }
-  if (missing(Pe)) {
-    Pe <- rep(NA, length=k)
-  }
-  if (missing(citl)) {
-    citl <- rep(NA, length=k)
-  }
-  if (missing(citl.se)) {
-    citl.se <- rep(NA, length=k)
-  }
-  if (missing(OE.95CI)) {
-    OE.95CI <- array(NA, dim=c(k,2))
-  }
-  if (is.null(dim(OE.95CI))) {
-    warning("Invalid dimension for 'OE.95CI', argument ignored.")
-    OE.95CI <- array(NA, dim=c(k,2))
-  }
-  if (dim(OE.95CI)[2] != 2 | dim(OE.95CI)[1] != k) {
-    warning("Invalid dimension for 'OE.95CI', argument ignored.")
-    OE.95CI <- array(NA, dim=c(k,2))
-  }
+  if(is.null(cstat)) cstat <- rep(NA, times=k)
+  if (is.null(cstat.se)) cstat.se <- rep(NA, times=k)
+  if (is.null(cstat.cilb)) cstat.cilb <- rep(NA, times=k)
+  if (is.null(cstat.ciub)) cstat.ciub <- rep(NA, times=k)
+  if (is.null(cstat.cilv)) cstat.cilv <- rep(0.95, times=k)
+  if (is.null(O)) O <- rep(NA, times=k)
+  if (is.null(Po)) Po <- rep(NA, times=k)
+  if (is.null(N)) N <- rep(NA, times=k)
+  if (is.null(sd.LP)) sd.LP <- rep(NA, times=k)
+  if (is.null(OE)) OE <- rep(NA, times=k)
+  if (is.null(OE.se)) OE.se <- rep(NA, times=k)
+  if(is.null(OE.cilb)) OE.cilb <- rep(NA, times=k)
+  if(is.null(OE.ciub)) OE.ciub <- rep(NA, times=k)
+  if(is.null(OE.cilv)) OE.cilv <- rep(0.95, times=k) # Assume 95% CI by default 
+  if (is.null(E)) E <- rep(NA, times=k)
+  if (is.null(Po.se)) Po.se <- rep(NA, times=k)
+  if (is.null(Pe)) Pe <- rep(NA, times=k)
+  if (missing(citl)) citl <- rep(NA, times=k)
+  if (is.null(citl.se)) citl.se <- rep(NA, times=k)
   
   #######################################################################################
   # Prepare results
@@ -361,18 +389,25 @@ valmeta <- function(measure="cstat", cstat, cstat.se, cstat.95CI, sd.LP, OE, OE.
       g <- NULL
     } else if (out$model=="normal/logit") {
       g <- "log(cstat/(1-cstat))"
+      #TODO: Specify inverse function inv.g
     } else {
       stop (paste("Meta-analysis model currently not supported: '", out$model, '"', sep=""))
     }
-      
+
     
-    ds <- ccalc(cstat=cstat, cstat.se=cstat.se, 
-                cstat.cilb=cstat.95CI[,1],
-                cstat.ciub=cstat.95CI[,2],
-                cstat.cilv=0.95,
-                sd.LP=sd.LP, 
-                N=N, O=O, Po=Po, slab=slab, g=g, level=pars.default$level, 
-                approx.se.method=pars.default$method.restore.c.se) 
+    ds <- ccalc(cstat = cstat, 
+                cstat.se = cstat.se, 
+                cstat.cilb = cstat.cilb,
+                cstat.ciub = cstat.ciub,
+                cstat.cilv = cstat.cilv,
+                sd.LP = sd.LP, 
+                N = N, 
+                O = O, 
+                Po = Po, 
+                slab = slab, 
+                g = g, 
+                level = pars.default$level, 
+                approx.se.method = pars.default$method.restore.c.se) 
     
     ## Assign study labels
     out$slab <- rownames(ds)
@@ -506,9 +541,9 @@ valmeta <- function(measure="cstat", cstat, cstat.se, cstat.95CI, sd.LP, OE, OE.
     }
     
     ds <- oecalc(OE = OE, OE.se = OE.se,
-                 OE.cilb = OE.95CI[,1],
-                 OE.ciub = OE.95CI[,2],
-                 OE.cilv = 0.95,
+                 OE.cilb = OE.cilb,
+                 OE.ciub = OE.ciub,
+                 OE.cilv = OE.cilv,
                  citl = citl, 
                  citl.se = citl.se,
                  N = N,
@@ -762,12 +797,7 @@ valmeta <- function(measure="cstat", cstat, cstat.se, cstat.95CI, sd.LP, OE, OE.
 #' @method print valmeta
 #' @export
 print.valmeta <- function(x, ...) {
-  if (x$measure=="cstat") {
-    text.stat <- "c-statistic"
-  } else if (x$measure=="OE") {
-    text.stat <- "O:E ratio"
-  }
-  
+  text.stat <- attr(x$data,'estimand')
   text.model <- if (x$method=="FE") "Fixed" else "Random"
   text.ci <- if(x$method=="BAYES") "credibility" else "confidence"
   text.pi <- if(x$method=="BAYES") "" else "(approximate)"
@@ -790,8 +820,6 @@ print.valmeta <- function(x, ...) {
 #' Function to create forest plots for objects of class \code{"valmeta"}.
 #' 
 #' @param x An object of class \code{"valmeta"}
-#' @param sort By default, studies are ordered by ascending effect size (\code{sort="asc"}). For study ordering by descending
-#' effect size, choose \code{sort="desc"}. For any other value, study ordering is ignored.
 #' @param \ldots Additional arguments which are passed to \link{forest}.
 #' 
 #' @details The forest plot shows the performance estimates of each validation with corresponding confidence 
@@ -807,8 +835,8 @@ print.valmeta <- function(x, ...) {
 #' 
 #' @examples 
 #' data(EuroSCORE)
-#' fit <- with(EuroSCORE, valmeta(cstat=c.index, cstat.se=se.c.index, 
-#'             cstat.95CI=cbind(c.index.95CIl,c.index.95CIu), N=n, O=n.events))
+#' fit <- valmeta(cstat=c.index, cstat.se=se.c.index, cstat.cilb=c.index.95CIl,
+#'                cstat.ciub=c.index.95CIu, N=n, O=n.events, data=EuroSCORE)
 #' plot(fit)
 #' 
 #' library(ggplot2)
@@ -818,21 +846,18 @@ print.valmeta <- function(x, ...) {
 #'             
 #' @author Thomas Debray <thomas.debray@gmail.com>
 #' 
-#' @import metafor
-#' @import ellipse
-#' @import ggplot2
-#' @importFrom stats reorder
 #' @return An object of class \code{ggplot}
 #' 
 #' @method plot valmeta
 #' @export
-plot.valmeta <- function(x, sort="asc", ...) {
+plot.valmeta <- function(x,  ...) {
   k <- dim(x$data)[1]
   yi.slab <- c(as.character(x$slab))
   yi <- c(x$data[,"theta"])
-  ci.lb <- c(x$data[,"theta.CIl"])
-  ci.ub <- c(x$data[,"theta.CIu"])
+  ci.lb <- c(x$data[,"theta.cilb"])
+  ci.ub <- c(x$data[,"theta.ciub"])
   
+  # Back-transform the raw data
   if (x$model=="normal/logit") {
     yi <- sapply(yi, inv.logit)
     ci.lb <- sapply(ci.lb, inv.logit)
@@ -841,37 +866,55 @@ plot.valmeta <- function(x, sort="asc", ...) {
     yi <- sapply(yi, exp)
     ci.lb <- sapply(ci.lb, exp)
     ci.ub <- sapply(ci.ub, exp)
-  }
+  } 
   
   yi.ci <- cbind(ci.lb, ci.ub)
   
-  if (x$measure=="cstat") {
-    #make sure to load plot_utils file and ggplot package when testing
-      forest(theta=yi, 
-             theta.ci.lb=yi.ci[,"ci.lb"], 
-             theta.ci.ub=yi.ci[,"ci.ub"], 
-             theta.slab=yi.slab, 
-           theta.summary=x$est, 
-           theta.summary.ci.lb=x$ci.lb,
-           theta.summary.ci.ub=x$ci.ub, 
-           theta.summary.pi.lb=x$pi.lb,
-           theta.summary.pi.ub=x$pi.ub,
-           xlim=c(0,1),
-           refline=0.5, xlab="c-statistic", sort=sort, ...)
-  } else if (x$measure=="OE") {
-    #metamisc::
-      forest(theta=yi, 
-                     theta.ci.lb=yi.ci[,"ci.lb"], 
-                     theta.ci.ub=yi.ci[,"ci.ub"], 
-                     theta.slab=yi.slab, 
-           theta.summary=x$est, 
-           theta.summary.ci.lb=x$ci.lb,
-           theta.summary.ci.ub=x$ci.ub, 
-           theta.summary.pi.lb=x$pi.lb,
-           theta.summary.pi.ub=x$pi.ub,
-           theta.summary.pi=(x$results[1,c("PIl","PIu")]), 
-           xlim=c(0,NA),
-           refline=1, xlab="Total O:E ratio", sort=sort, ...)
-  }
+  forest(theta = yi, 
+         theta.ci.lb = yi.ci[,"ci.lb"], 
+         theta.ci.ub = yi.ci[,"ci.ub"], 
+         theta.slab = yi.slab, 
+         theta.summary = x$est, 
+         theta.summary.ci.lb = x$ci.lb,
+         theta.summary.ci.ub = x$ci.ub, 
+         theta.summary.pi.lb = x$pi.lb,
+         theta.summary.pi.ub = x$pi.ub,
+         xlim = attr(x$data,'plot_lim'),
+         refline = attr(x$data,'plot_refline'), 
+         xlab = attr(x$data,'estimand'),  
+         ...)
 }
+
+.initiateDefaultPars <- function(pars) {
+  pars.default <- list(level = 0.95,
+                       hp.mu.mean = 0, 
+                       hp.mu.var = 1E6,
+                       hp.tau.min = 0,
+                       hp.tau.max = 2,
+                       hp.tau.mean = 0,
+                       hp.tau.sigma = 0.5,
+                       hp.tau.dist = "dunif", 
+                       hp.tau.df = 3, 
+                       correction = 0.5,
+                       method.restore.c.se=4,
+                       model.cstat = "normal/logit", #Alternative: "normal/identity"
+                       model.oe = "normal/log") #Alternative: "poisson/log" or "normal/identity"
+  
+  if (!missing(pars)) {
+    for (i in 1:length(pars)) {
+      element <- ls(pars)[i]
+      pars.default[[element]] <- pars[[element]]
+    }
+  }
+  
+  if (pars.default$level < 0 | pars.default$level > 1) {
+    stop ("Invalid value for 'level'!")
+  } 
+  
+  return(pars.default)
+}
+
+
+
+
 

@@ -4,43 +4,72 @@
 #' corresponding sampling variance. 
 #' 
 #' @param OE vector with the estimated ratio of total observed versus total expected events
-#' @param OE.se vector with the standard errors of the estimated O:E ratios
-#' @param OE.cilb vector to specify the lower limits of the confidence interval for \code{OE}.
-#' @param OE.ciub vector to specify the upper limits of the confidence interval for \code{OE}.
-#' @param OE.cilv vector to specify the levels of aformentioned confidence interval limits. 
+#' @param OE.se Optional vector with the standard errors of the estimated O:E ratios
+#' @param OE.cilb Optional vector to specify the lower limits of the confidence interval for \code{OE}.
+#' @param OE.ciub Optional vector to specify the upper limits of the confidence interval for \code{OE}.
+#' @param OE.cilv Optional vector to specify the levels of aformentioned confidence interval limits. 
 #' (default: 0.95, which corresponds to the 95\% confidence interval).
-#' @param citl vector with the estimated calibration-in-the-large statistics
-#' @param citl.se vector with the standard error of the calibration-in-the-large statistics
-#' @param N vector to specify the sample/group sizes.
-#' @param O vector to specify the total number of observed events.
-#' @param E vector to specify the total number of expected events
-#' @param Po vector to specify the (cumulative) observed event probabilities.
-#' @param Po.se vector with the standard errors of \code{Po}.
-#' @param Pe vector to specify the (cumulative) expected event probabilites
+#' @param EO Optional vector with the estimated ratio of total expected versus total observed events
+#' @param EO.se Optional vector with the standard errors of the estimated E:O ratios
+#' @param citl Optional vector with the estimated calibration-in-the-large statistics
+#' @param citl.se Optional vector with the standard error of the calibration-in-the-large statistics
+#' @param N Optional vector to specify the sample/group sizes.
+#' @param O Optional vector to specify the total number of observed events.
+#' @param E Optional vector to specify the total number of expected events
+#' @param Po Optional vector to specify the (cumulative) observed event probabilities.
+#' @param Po.se Optional vector with the standard errors of \code{Po}.
+#' @param Pe Optional vector to specify the (cumulative) expected event probabilites
 #' (if specified, during time \code{t.val})
-#' @param data optional data frame containing the variables given to the arguments above.
-#' @param slab optional vector with labels for the studies.
+#' @param data Optional data frame containing the variables given to the arguments above.
+#' @param slab Optional vector with labels for the studies.
 #' @param add a non-negative number indicating the amount to add to zero counts. See `Details'
 #' @param g a quoted string that is the function to transform estimates of the total O:E ratio; see the details below.
 #' @param level level for confidence interval, default \code{0.95}.
 #' @param \ldots Additional arguments.
+#' 
+#' @references 
+#' Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review and meta-analysis of prediction model performance. BMJ. 2017;356:i6460. 
+#' 
+#' Debray TPA, Damen JAAG, Riley R, Snell KIE, Reitsma JB, Hooft L, et al. A framework for meta-analysis of  prediction model studies with binary and time-to-event outcomes. Stat Methods Med Res. 2018; In press. 
+#' 
+#' Snell KI, Ensor J, Debray TP, Moons KG, Riley RD. Meta-analysis of prediction model performance across 
+#' multiple studies: Which scale helps ensure between-study normality for the C -statistic and calibration measures? 
+#' \emph{Statistical Methods in Medical Research}. 2017. 
+#' 
+#' 
+#' @return An object of class c("mm_perf","data.frame") with the following columns:
+#' \describe{
+##'  \item{"theta"}{The (transformed) O:E ratio. }
+##'  \item{"theta.se"}{Standard errors of the (transformed) O:E ratio.}
+##'  \item{"theta.cilb"}{Lower confidence interval of the (transformed) O:E ratios. The level is specified in
+##'  \code{level}. Intervals are calculated on the same scale as \code{theta} by assuming a Normal distribution.}
+##'  \item{"theta.ciub"}{Upper confidence interval of the (transformed) c-statistics. The level is specified in
+##'  \code{level}. Intervals are calculated on the same scale as \code{theta} by assuming a Normal distribution.}
+##'  \item{"theta.source"}{Method used for calculating the (transformed) O:E ratio.}
+##'  \item{"theta.se.source"}{Method used for calculating the standard error of the (transformed) O:E ratio.}
+##' }
 #' 
 #' @examples 
 #' ######### Validation of prediction models with a binary outcome #########
 #' data(EuroSCORE)
 #' 
 #' # Calculate the total O:E ratio and its standard error
-#' oecalc(O=n.events, E=e.events, N=n, data=EuroSCORE, slab=Study)
+#' est1 <- oecalc(O = n.events, E = e.events, N = n, data = EuroSCORE, slab = Study)
+#' est1
 #' 
 #' # Calculate the log of the total O:E ratio and its standard error
-#' oecalc(O=n.events, E=e.events, N=n, data=EuroSCORE, slab=Study, g="log(OE)")
+#' est2 <- oecalc(O = n.events, E = e.events, N = n, data = EuroSCORE, slab = Study, g = "log(OE)")
+#' est2
+#' 
+#' # Display the results of all studies in a forest plot
+#' plot(est1)
 #' 
 #' @keywords meta-analysis calibration performance
 #' 
 #' @author Thomas Debray <thomas.debray@gmail.com>
 #' 
 #' @export
-oecalc <- function(OE, OE.se, OE.cilb, OE.ciub, OE.cilv, citl, citl.se, N, O, E, Po, Po.se, Pe, 
+oecalc <- function(OE, OE.se, OE.cilb, OE.ciub, OE.cilv, EO, EO.se, citl, citl.se, N, O, E, Po, Po.se, Pe, 
                    data, slab, add=1/2, g=NULL, level=0.95, ...) {
   
   ### check if data argument has been specified
@@ -75,6 +104,10 @@ oecalc <- function(OE, OE.se, OE.cilb, OE.ciub, OE.cilv, citl, citl.se, N, O, E,
   OE.ciub       <- eval(mf.OE.ciub, data, enclos=sys.frame(sys.parent()))
   mf.OE.cilv    <- mf[[match("OE.cilv", names(mf))]]
   OE.cilv       <- eval(mf.OE.cilv, data, enclos=sys.frame(sys.parent()))
+  mf.EO         <- mf[[match("EO", names(mf))]]
+  EO            <- eval(mf.EO, data, enclos=sys.frame(sys.parent()))
+  mf.EO.se      <- mf[[match("EO.se", names(mf))]]
+  EO.se         <- eval(mf.EO.se, data, enclos=sys.frame(sys.parent()))
   mf.citl       <- mf[[match("citl", names(mf))]]
   citl          <- eval(mf.citl, data, enclos=sys.frame(sys.parent()))
   mf.citl.se    <- mf[[match("citl.se", names(mf))]]
@@ -103,6 +136,10 @@ oecalc <- function(OE, OE.se, OE.cilb, OE.ciub, OE.cilv, citl, citl.se, N, O, E,
     k <- length(OE)
   } else if (!is.null(OE.se)) {
     k <- length(OE.se)
+  } else if (!is.null(EO)) {
+    k <- length(EO)
+  } else if (!is.null(EO.se)) {
+    k <- length(EO.se)
   } else if (!is.null(OE.cilb)) {
     k <- length(OE.cilb)
   } else if (!is.null(OE.ciub)) {
@@ -131,6 +168,8 @@ oecalc <- function(OE, OE.se, OE.cilb, OE.ciub, OE.cilv, citl, citl.se, N, O, E,
   
   if(is.null(OE))  OE <- rep(NA, times=k)
   if(is.null(OE.se)) OE.se <- rep(NA, times=k)
+  if(is.null(EO))  EO <- rep(NA, times=k)
+  if(is.null(EO.se)) EO.se <- rep(NA, times=k)
   if(is.null(OE.cilb)) OE.cilb <- rep(NA, times=k)
   if(is.null(OE.ciub)) OE.ciub <- rep(NA, times=k)
   if(is.null(OE.cilv)) OE.cilv <- rep(0.95, times=k) # Assume 95% CI by default 
@@ -177,10 +216,11 @@ oecalc <- function(OE, OE.se, OE.cilb, OE.ciub, OE.cilv, citl, citl.se, N, O, E,
   results[[4]] <- data.frame(est=resoe.O.Pe.N(O=O, Pe=Pe, N=N, correction = add, g=g), method="O, Pe and N")
   results[[5]] <- data.frame(est=resoe.E.Po.N(E=E, Po=Po, N=N, correction = add, g=g), method="E, Po and N")
   results[[6]] <- data.frame(est=resoe.Po.Pe.N(Po=Po, Pe=Pe, N=N, correction = add, g=g), method="Po, Pe and N")
-  results[[7]] <- data.frame(est=resoe.O.Po.E(O=O, Po=Po, E=E, correction = add, g=g), method="O, E and Po") 
-  results[[8]] <- data.frame(est=resoe.O.Pe.E(O=O, Pe=Pe, E=E, correction = add, g=g), method="O, E and Pe") 
-  results[[9]] <- data.frame(est=resoe.O.E(O=O, E=E, correction = add, g=g), method="O and E")
-  results[[10]] <- data.frame(est=resoe.Po.Pe(Po=Po, Pe=Pe, g=g), method = "Po and Pe")
+  results[[7]] <- data.frame(est=resoe.EO.se(EO=EO, EO.se=EO.se, g=g), method="EO and SE(EO)")
+  results[[8]] <- data.frame(est=resoe.O.Po.E(O=O, Po=Po, E=E, correction = add, g=g), method="O, E and Po") 
+  results[[9]] <- data.frame(est=resoe.O.Pe.E(O=O, Pe=Pe, E=E, correction = add, g=g), method="O, E and Pe") 
+  results[[10]] <- data.frame(est=resoe.O.E(O=O, E=E, correction = add, g=g), method="O and E")
+  results[[11]] <- data.frame(est=resoe.Po.Pe(Po=Po, Pe=Pe, g=g), method = "Po and Pe")
 
 
   #t.citl   <- restore.oe.citl(citl=citl, citl.se=citl.se, O=O, Po=Po, N=N, t.extrapolate=t.extrapolate, t.ma=t.ma, t.val=t.val, 
@@ -245,6 +285,13 @@ oecalc <- function(OE, OE.se, OE.cilb, OE.ciub, OE.cilv, citl, citl.se, N, O, E,
     rownames(ds) <- slab
   }
   
+  # Add some attributes specifying the nature of the data
+  attr(ds, 'estimand') <- "Total O:E ratio"
+  attr(ds, 'theta_scale') <- g
+  attr(ds, 'plot_refline') <- 1
+  attr(ds, 'plot_lim') <- c(0,NA)
+  
+  class(ds) <- c("mm_perf", class(ds))
   
   return(ds)
 }
@@ -298,6 +345,32 @@ resoe.O.Po.E <- function(O, Po, E, correction, g=NULL) {
 
 resoe.O.Pe.E <- function(O, Pe, E, correction, g=NULL) {
   return(resoe.O.E.N(O=O, E=E, N=E/Pe, correction=correction, g=g))
+}
+
+resoe.EO.se  <- function(EO, EO.se, g=NULL) {
+  k <- length(EO)
+  out <- array(NA, dim=c(k,2))
+  
+  # Var(1/x) = Var(EO)*(d(1/x)/d(x))**2 = Var(EO) * (-1/EO**2)**2
+  out[,1] <- 1/EO
+  out[,2] <- (EO.se**2)/(EO**4)
+  
+  if(is.null(g)) {
+    return (out)
+  }
+  
+  toe <- toe.var <- rep(NA, k) #Transformed OE and its error variance
+  
+  for (i in 1:k) {
+    oei <- out[i,1]
+    toe[i] <- eval(parse(text=g), list(OE = oei))
+    vi  <- out[i,2]
+    names(oei) <- names(vi) <- "OE"
+    toe.var[i] <- as.numeric((deltaMethod(object=oei, g=g, vcov.=vi))["SE"])**2
+  }
+  
+  out <- cbind(toe, toe.var)
+  return (out)
 }
   
 resoe.OE.se <- function(OE, OE.se, g=NULL) {

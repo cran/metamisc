@@ -4,13 +4,16 @@
 \alias{uvmeta}
 \title{Univariate meta-analysis}
 \usage{
-uvmeta(r, r.se, method = "REML", test = "knha", labels, na.action,
-  n.chains = 4, pars, ret.fit = FALSE, verbose = FALSE, ...)
+uvmeta(r, r.se, r.vi, method = "REML", test = "knha", labels,
+  na.action, n.chains = 4, pars, ret.fit = FALSE, verbose = FALSE,
+  ...)
 }
 \arguments{
 \item{r}{Vector of numerics containing the effect size of each study}
 
 \item{r.se}{Vector of numerics containing the standard error of the effect sizes}
+
+\item{r.vi}{Vector of numerics containing the sampling variance of the effect sizes}
 
 \item{method}{Character string specifying whether a fixed-effect or a random-effects model should be fitted. 
 A fixed-effect model is fitted when using \code{method="FE"}. Random-effects models are fitted by setting method equal 
@@ -21,7 +24,7 @@ to one of the following: \code{"REML"} (Default), \code{"DL"}, \code{"HE"}, \cod
 for the fixed effects should be computed. By default (\code{test="knha"}), the method by Knapp and Hartung (2003) is used for adjusting test statistics 
 and confidence intervals.  Type '\code{?rma}' for more details.}
 
-\item{labels}{Vector of characters containing the labels for the studies}
+\item{labels}{Optional vector of characters containing the labels for the studies}
 
 \item{na.action}{A function which indicates what should happen when the data contain NAs. 
 Defaults to \code{"na.fail"}, other options are \code{"na.omit"}, \code{"na.exclude"} or \code{"na.pass"}.}

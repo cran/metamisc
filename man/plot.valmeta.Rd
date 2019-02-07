@@ -4,13 +4,10 @@
 \alias{plot.valmeta}
 \title{Forest Plots}
 \usage{
-\method{plot}{valmeta}(x, sort = "asc", ...)
+\method{plot}{valmeta}(x, ...)
 }
 \arguments{
 \item{x}{An object of class \code{"valmeta"}}
-
-\item{sort}{By default, studies are ordered by ascending effect size (\code{sort="asc"}). For study ordering by descending
-effect size, choose \code{sort="desc"}. For any other value, study ordering is ignored.}
 
 \item{\ldots}{Additional arguments which are passed to \link{forest}.}
 }
@@ -27,8 +24,8 @@ A 95\% prediction interval is added by default for random-effects models,  the d
 }
 \examples{
 data(EuroSCORE)
-fit <- with(EuroSCORE, valmeta(cstat=c.index, cstat.se=se.c.index, 
-            cstat.95CI=cbind(c.index.95CIl,c.index.95CIu), N=n, O=n.events))
+fit <- valmeta(cstat=c.index, cstat.se=se.c.index, cstat.cilb=c.index.95CIl,
+               cstat.ciub=c.index.95CIu, N=n, O=n.events, data=EuroSCORE)
 plot(fit)
 
 library(ggplot2)

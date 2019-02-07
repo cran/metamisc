@@ -5,37 +5,38 @@
 \title{Calculate the concordance statistic}
 \usage{
 ccalc(cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv, sd.LP, N, O, Po,
-  data, slab, subset, g = NULL, level = 0.95, approx.se.method = 4, ...)
+  data, slab, subset, g = NULL, level = 0.95, approx.se.method = 4,
+  ...)
 }
 \arguments{
 \item{cstat}{vector to specify the estimated c-statistics.}
 
-\item{cstat.se}{vector to specify the corresponding standard errors.}
+\item{cstat.se}{Optional vector to specify the corresponding standard errors.}
 
-\item{cstat.cilb}{vector to specify the lower limits of the confidence interval.}
+\item{cstat.cilb}{Optional vector to specify the lower limits of the confidence interval.}
 
-\item{cstat.ciub}{vector to specify the upper limits of the confidence interval.}
+\item{cstat.ciub}{Optional vector to specify the upper limits of the confidence interval.}
 
-\item{cstat.cilv}{vector to specify the levels of aformentioned confidence interval limits. 
+\item{cstat.cilv}{Optional vector to specify the levels of aformentioned confidence interval limits. 
 (default: 0.95, which corresponds to the 95\% confidence interval).}
 
-\item{sd.LP}{vector to specify the standard deviations of the linear predictor (prognostic index).}
+\item{sd.LP}{Optional vector to specify the standard deviations of the linear predictor (prognostic index).}
 
-\item{N}{vector to specify the sample/group sizes.}
+\item{N}{Optional vector to specify the sample/group sizes.}
 
-\item{O}{vector to specify the total number of observed events.}
+\item{O}{Optional vector to specify the total number of observed events.}
 
-\item{Po}{vector to specify the observed event probabilities.}
+\item{Po}{Optional vector to specify the observed event probabilities.}
 
-\item{data}{optional data frame containing the variables given to the arguments above.}
+\item{data}{Optional data frame containing the variables given to the arguments above.}
 
-\item{slab}{optional vector with labels for the studies.}
+\item{slab}{Optional vector with labels for the studies.}
 
-\item{subset}{optional vector indicating the subset of studies that should be used. This can be a logical vector or a numeric vector indicating the indices of the studies to include.}
+\item{subset}{Optional vector indicating the subset of studies that should be used. This can be a logical vector or a numeric vector indicating the indices of the studies to include.}
 
 \item{g}{a quoted string that is the function to transform estimates of the c-statistic; see the details below.}
 
-\item{level}{level for confidence interval, default \code{0.95}.}
+\item{level}{Optional numeric to specify the level for the confidence interval, default \code{0.95}.}
 
 \item{approx.se.method}{integer specifying which method should be used for estimating the standard error of the
 c-statistic (Newcombe, 2006). So far, only method \code{2} and method \code{4} (default) have been implemented.}
@@ -43,13 +44,13 @@ c-statistic (Newcombe, 2006). So far, only method \code{2} and method \code{4} (
 \item{\ldots}{Additional arguments.}
 }
 \value{
-An array with the following columns:
+An object of class c("mm_perf","data.frame") with the following columns:
 \describe{
  \item{"theta"}{The (transformed) c-statistics. }
  \item{"theta.se"}{Standard errors of the (transformed) c-statistics.}
- \item{"theta.CIl"}{Lower confidence interval of the (transformed) c-statistics. The level is specified in
+ \item{"theta.cilb"}{Lower confidence interval of the (transformed) c-statistics. The level is specified in
  \code{level}. Intervals are calculated on the same scale as \code{theta} by assuming a Normal distribution.}
- \item{"theta.CIu"}{Upper confidence interval of the (transformed) c-statistics. The level is specified in
+ \item{"theta.ciub"}{Upper confidence interval of the (transformed) c-statistics. The level is specified in
  \code{level}. Intervals are calculated on the same scale as \code{theta} by assuming a Normal distribution.}
  \item{"theta.source"}{Method used for calculating the (transformed) c-statistic.}
  \item{"theta.se.source"}{Method used for calculating the standard error of the (transformed) c-statistic.}
@@ -85,17 +86,24 @@ proposed by Hanley and McNeil, as specified in \code{approx.se.method}.
 data(EuroSCORE)
 
 # Calculate the c-statistic and its standard error
-ccalc(cstat=c.index, cstat.se=se.c.index, cstat.cilb=c.index.95CIl, cstat.ciub=c.index.95CIu, 
-      N=n, O=n.events, data=EuroSCORE, slab=Study)
+est1 <- ccalc(cstat = c.index, cstat.se = se.c.index, cstat.cilb = c.index.95CIl, 
+              cstat.ciub = c.index.95CIu, N = n, O = n.events, data = EuroSCORE, slab = Study)
+est1
   
 # Calculate the logit c-statistic and its standard error
-ccalc(cstat=c.index, cstat.se=se.c.index, cstat.cilb=c.index.95CIl, cstat.ciub=c.index.95CIu, 
-      N=n, O=n.events, data=EuroSCORE, slab=Study, g="log(cstat/(1-cstat))")
+est2 <- ccalc(cstat = c.index, cstat.se = se.c.index, cstat.cilb = c.index.95CIl, 
+              cstat.ciub = c.index.95CIu, N = n, O = n.events, data = EuroSCORE, slab = Study, 
+              g = "log(cstat/(1-cstat))")
+est2
+      
+# Display the results of all studies in a forest plot
+plot(est1)
                                                             
 }
 \references{
-Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review 
-and meta-analysis of prediction model performance. \emph{BMJ}. 2017; 356:i6460.
+Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review and meta-analysis of prediction model performance. BMJ. 2017;356:i6460. 
+
+Debray TPA, Damen JAAG, Riley R, Snell KIE, Reitsma JB, Hooft L, et al. A framework for meta-analysis of  prediction model studies with binary and time-to-event outcomes. Stat Methods Med Res. 2018; In press. 
 
 Hanley JA, McNeil BJ. The meaning and use of the area under a receiver operating characteristic (ROC) 
 curve. \emph{Radiology}. 1982; 143(1):29--36.

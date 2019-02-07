@@ -8,7 +8,7 @@ A hypothetical dataset with 500 subjects suspected of having deep vein thrombosi
 }
 \usage{data(DVTipd)}
 \format{
-  A data frame with 500 observations of 15 variables.
+  A data frame with 500 observations of 16 variables.
   \describe{
     \item{\code{sex}}{gender (0=female, 1=male)}
     \item{\code{malign}}{active malignancy (0=no active malignancy, 1=active malignancy)}
@@ -25,6 +25,7 @@ A hypothetical dataset with 500 subjects suspected of having deep vein thrombosi
     \item{\code{histdvt}}{history of previous DVT}
     \item{\code{ddimdich}}{dichotimized D-dimer value}
     \item{\code{dvt}}{final diagnosis of DVT}
+    \item{\code{study}}{study indicator}
   }
 }
 \details{

@@ -9,6 +9,7 @@
 #' 
 #' @param r Vector of numerics containing the effect size of each study
 #' @param r.se Vector of numerics containing the standard error of the effect sizes
+#' @param r.vi Vector of numerics containing the sampling variance of the effect sizes
 #' @param method Character string specifying whether a fixed-effect or a random-effects model should be fitted. 
 #' A fixed-effect model is fitted when using \code{method="FE"}. Random-effects models are fitted by setting method equal 
 #' to one of the following: \code{"REML"} (Default), \code{"DL"}, \code{"HE"}, \code{"SJ"}, \code{"ML"}, \code{"EB"}, 
@@ -16,7 +17,7 @@
 #' @param test Optional character string when \code{method!="BAYES"} to specify how test statistics and confidence intervals 
 #' for the fixed effects should be computed. By default (\code{test="knha"}), the method by Knapp and Hartung (2003) is used for adjusting test statistics 
 #' and confidence intervals.  Type '\code{?rma}' for more details.
-#' @param labels Vector of characters containing the labels for the studies
+#' @param labels Optional vector of characters containing the labels for the studies
 #' @param na.action A function which indicates what should happen when the data contain NAs. 
 #' Defaults to \code{"na.fail"}, other options are \code{"na.omit"}, \code{"na.exclude"} or \code{"na.pass"}.
 #' @param n.chains Optional numeric specifying the number of chains to use in the Gibbs sampler (\code{method="BAYES"}). 
@@ -107,12 +108,12 @@
 #' @import metafor
 #' @export
 
-uvmeta <- function(r, r.se, method="REML", test="knha", labels, na.action, 
+uvmeta <- function(r, r.se, r.vi, method="REML", test="knha", labels, na.action, 
                    n.chains=4, pars, ret.fit=FALSE, verbose=FALSE, ...) 
   UseMethod("uvmeta")
 
 #' @export
-uvmeta.default <- function(r, r.se, method="REML", test="knha", labels, na.action, 
+uvmeta.default <- function(r, r.se, r.vi, method="REML", test="knha", labels, na.action, 
                            n.chains=4, pars, ret.fit=FALSE, verbose=FALSE, ...)
 {
   out <- list()
@@ -156,9 +157,15 @@ uvmeta.default <- function(r, r.se, method="REML", test="knha", labels, na.actio
     }
   }
   
-  
-  if (length(r)!=length(r.se)) {
-    stop("The vectors 'r' and 'r.se' have different lengths!")
+  if (!missing(r.se)) {
+    if (length(r)!=length(r.se)) {
+      stop("The vectors 'r' and 'r.se' have different lengths!")
+    } 
+  } else if (!missing(r.vi)) {
+    if (length(r)!=length(r.vi)) {
+      stop("The vectors 'r' and 'r.vi' have different lengths!")
+    }
+    r.se <- sqrt(r.vi)
   }
   
   ds <- as.data.frame(cbind(as.vector(r),as.vector(r.se)))

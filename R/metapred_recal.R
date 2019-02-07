@@ -3,8 +3,12 @@
 # recalibrate() is to be used by predict.metapred() and is exported.
 # object Model fit object, of class glm, lm or metapred
 # newdata Data to use for recalibration.
+# wholefit should whole fit be returned?
 
-computeRecal <- function(object, newdata, b = NULL, f = ~ 1, estFUN = NULL,  ...) {
+# To be replaced with one or two more basic functions: 1 for whole fit, 1 for returning coefficients only.
+
+computeRecal <- function(object, newdata, b = NULL, f = ~ 1, estFUN = NULL, f.orig = NULL, wholefit = FALSE,  ...) {
+  dots <- list(...)
   if (is.null(b)) b <- coef(object)
   if (is.null(estFUN)) {
     if (inherits(object, "metapred"))
@@ -14,29 +18,82 @@ computeRecal <- function(object, newdata, b = NULL, f = ~ 1, estFUN = NULL,  ...
   estFUN <- match.fun(estFUN)
 
   # Make offset (linear predictor)
-  pred.mf <- as.matrix(stats::model.frame(formula = formula(object), data = newdata))
-  pred.mf[ , 1] <- 1
-  lp <- pred.mf %*% b
+  X <- model.matrix(if (is.null(f.orig)) formula(object) else as.formula(f.orig), data = newdata)
+  lp <- X %*% b
 
   # offset must be in newdata.
   osdata   <- cbind(newdata, lp)
   f <- update.formula(formula(object), formula(f))
   if (is.null(object$family))
-    br <- coef(estFUN(f, data = osdata, offset = lp))
+  { 
+    if (!is.null(dots[["family"]])) {
+      refit <- estFUN(f, data = osdata, offset = lp, family = dots[["family"]])
+    } else 
+      refit <- estFUN(f, data = osdata, offset = lp)
+  } else 
+    refit <- estFUN(f, data = osdata, offset = lp, family = object$family)
+  
+  if (isTRUE(wholefit))
+    return(refit)
   else
-    br <- coef(estFUN(f, data = osdata, offset = lp, family = object$family))
-
-  br
+    return(coef(refit))
 }
+
+# p vector of predicted probs or outcomes
+# y outcome vector
+# estFUN estimation function
+# family family
+# which is "intercept" or "slope" or "add.slope".
+# ... For compatibility only
+pred.recal <- function(p, y, estFUN, family = gaussian, which = "intercept", ...) {
+  if (is.character(family))  # Taken directly from glm()
+    family <- get(family, mode = "function", envir = parent.frame())
+  if (is.function(family)) 
+    family <- family()
+  if (is.null(family$family)) {
+    print(family)
+    stop("'family' not recognized")
+  }
+  
+  estFUN <- match.fun(estFUN)
+  lp <- family$linkfun(p)
+  data <- data.frame(y = y, lp = lp)
+  
+  if (identical(which, "intercept"))
+    out <- estFUN(formula = y ~ 1,  data = data, family = family, offset = lp)
+  if (identical(which, "slope"))
+    out <- estFUN(formula = y ~ lp + 1, data = data, family = family)
+  if (identical(which, "add.slope"))
+    out <- estFUN(formula = y ~ lp + 1, data = data, family = family, offset = lp)
+  
+  class(out) <- c("recal", class(out))
+  out
+}
+
+# Object recal object
+# parm "estimate" is the only viable obtion
+# level 
+# #' @export
+# confint.recal <- function(object, parm = "estimate", level = .95, ...) { # Works for lm. And glm?
+#   ses <- se(object, ...)
+#   coefs <- coef(object, ...)
+#   if(level < 0 || level > 1)
+#     stop("Impossible confidence level. Possible levels: 0 < level < 1")
+#   z <- qt(1 - (1 - level)/2, df = object$df.residual) # z = t distributed
+#   data.frame("ci.lb" = coefs - z * ses, "ci.ub" = coefs + z * ses)
+# }
+
+
+
 
 
 ## Split this into two functions.
 # shrink <- function(object, newdata, method = "chisq", b = NULL, estFUN = NULL, ...) {
 #   call <- match.call()
 #   if (is.null(b)) b <- coef(object)
-#   if (is.null(object$original.coefficients))
-#     object$original.coefficients <- list()
-#   if (!is.list(object$original.coefficients))
+#   if (is.null(object$orig.coef))
+#     object$orig.coef <- list()
+#   if (!is.list(object$orig.coef))
 #     stop("object is incompatible")
 #   
 #   if (identical(method, "chisq")) {
@@ -47,7 +104,7 @@ computeRecal <- function(object, newdata, b = NULL, f = ~ 1, estFUN = NULL,  ...
 #   else {
 #   f <- formula( ~ lp)
 #   
-#   object$original.coefficients[[length(object$original.coefficients) + 1]] <- coef(object)
+#   object$orig.coef[[length(object$orig.coef) + 1]] <- coef(object)
 #   br <- computeRecal(object = object, newdata = newdata, f = f, estFUN = estFUN, ...)
 #   
 #   object$shrinkage.factor <- br[2] + 1
@@ -107,17 +164,17 @@ computeRecal <- function(object, newdata, b = NULL, f = ~ 1, estFUN = NULL,  ...
 #' @export
 recalibrate <- function(object, newdata, f = ~ 1, estFUN = NULL, ...) {
   call <- match.call()
-  if (is.null(object$original.coefficients))
-    object$original.coefficients <- list()
-  if (!is.list(object$original.coefficients))
+  if (is.null(object$orig.coef))
+    object$orig.coef <- list()
+  if (!is.list(object$orig.coef))
     stop("object is incompatible with recalibrate.")
   f <- as.formula(f)
 
-  object$original.coefficients[[length(object$original.coefficients) + 1]] <- coef(object)
+  object$orig.coef[[length(object$orig.coef) + 1]] <- coef(object)
   br <- computeRecal(object = object, newdata = newdata, f = f, estFUN = estFUN, ...)
   i <- match(names(br), names(object$coefficients))
   object$coefficients[i] <- object$coefficients[i] + br
-  
+
   if (is.call(object$call))
   {
     object$original.call <- object$call
@@ -152,9 +209,9 @@ recalibrate <- function(object, newdata, f = ~ 1, estFUN = NULL, ...) {
 #   coefficients <- FALSE # for future development.
 #   if (isTRUE(intercept) || isTRUE(coefficients))
 #   {
-#     if (is.null(object$original.coefficients))
-#       object$original.coefficients <- list()
-#     if (!is.list(object$original.coefficients))
+#     if (is.null(object$orig.coef))
+#       object$orig.coef <- list()
+#     if (!is.list(object$orig.coef))
 #       stop("object is incompatible with recalibrate.")
 #     if (is.null(estFUN)) {
 #       if (inherits(object, "metapred"))
@@ -167,12 +224,12 @@ recalibrate <- function(object, newdata, f = ~ 1, estFUN = NULL, ...) {
 #   if (isTRUE(intercept))
 #   {
 #     int <- computeInt(object = object, newdata = newdata, estFUN = estFUN, ...)
-#     object$original.coefficients[[length(object$original.coefficients) + 1]] <- coef(object)
+#     object$orig.coef[[length(object$orig.coef) + 1]] <- coef(object)
 #     object$coefficients[1] <- int
 #   }
 #
 #   if (isTRUE(coefficients))
-#     stop("coefficient recalibration is not implemented yet.")
+#     stop("coefficientsficient recalibration is not implemented yet.")
 #
 #   if (isTRUE(intercept) || isTRUE(coefficients))
 #     if (is.call(object$call))

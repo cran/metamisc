@@ -4,7 +4,8 @@
 \alias{riley}
 \title{Fit the alternative model for bivariate random-effects meta-analysis}
 \usage{
-riley(X, slab, optimization = "Nelder-Mead", control = list(), pars, ...)
+riley(X, slab, optimization = "Nelder-Mead", control = list(), pars,
+  ...)
 }
 \arguments{
 \item{X}{data frame containing integer variables \code{Y1}, \code{vars1}, \code{Y2} and \code{vars2},

@@ -3,20 +3,20 @@
 #' The function calculates (transformed versions of) the concordance (c-) statistic with the corresponding sampling variance. 
 #' 
 #' @param cstat vector to specify the estimated c-statistics.
-#' @param cstat.se vector to specify the corresponding standard errors.
-#' @param cstat.cilb vector to specify the lower limits of the confidence interval.
-#' @param cstat.ciub vector to specify the upper limits of the confidence interval.
-#' @param cstat.cilv vector to specify the levels of aformentioned confidence interval limits. 
+#' @param cstat.se Optional vector to specify the corresponding standard errors.
+#' @param cstat.cilb Optional vector to specify the lower limits of the confidence interval.
+#' @param cstat.ciub Optional vector to specify the upper limits of the confidence interval.
+#' @param cstat.cilv Optional vector to specify the levels of aformentioned confidence interval limits. 
 #' (default: 0.95, which corresponds to the 95\% confidence interval).
-#' @param sd.LP vector to specify the standard deviations of the linear predictor (prognostic index).
-#' @param N vector to specify the sample/group sizes.
-#' @param O vector to specify the total number of observed events.
-#' @param Po vector to specify the observed event probabilities.
-#' @param data optional data frame containing the variables given to the arguments above.
-#' @param slab optional vector with labels for the studies.
-#' @param subset optional vector indicating the subset of studies that should be used. This can be a logical vector or a numeric vector indicating the indices of the studies to include.
+#' @param sd.LP Optional vector to specify the standard deviations of the linear predictor (prognostic index).
+#' @param N Optional vector to specify the sample/group sizes.
+#' @param O Optional vector to specify the total number of observed events.
+#' @param Po Optional vector to specify the observed event probabilities.
+#' @param data Optional data frame containing the variables given to the arguments above.
+#' @param slab Optional vector with labels for the studies.
+#' @param subset Optional vector indicating the subset of studies that should be used. This can be a logical vector or a numeric vector indicating the indices of the studies to include.
 #' @param g a quoted string that is the function to transform estimates of the c-statistic; see the details below.
-#' @param level level for confidence interval, default \code{0.95}.
+#' @param level Optional numeric to specify the level for the confidence interval, default \code{0.95}.
 #' @param approx.se.method integer specifying which method should be used for estimating the standard error of the
 #' c-statistic (Newcombe, 2006). So far, only method \code{2} and method \code{4} (default) have been implemented.
 #' @param \ldots Additional arguments.
@@ -44,8 +44,9 @@
 #' }
 #' 
 #' @references 
-#' Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review 
-#' and meta-analysis of prediction model performance. \emph{BMJ}. 2017; 356:i6460.
+#' Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review and meta-analysis of prediction model performance. BMJ. 2017;356:i6460. 
+#' 
+#' Debray TPA, Damen JAAG, Riley R, Snell KIE, Reitsma JB, Hooft L, et al. A framework for meta-analysis of  prediction model studies with binary and time-to-event outcomes. Stat Methods Med Res. 2018; In press. 
 #' 
 #' Hanley JA, McNeil BJ. The meaning and use of the area under a receiver operating characteristic (ROC) 
 #' curve. \emph{Radiology}. 1982; 143(1):29--36.
@@ -61,13 +62,13 @@
 #' for survival data. \emph{Biom J}. 2015;57(4):592--613. 
 #' 
 #' 
-#' @return An array with the following columns:
+#' @return An object of class c("mm_perf","data.frame") with the following columns:
 #' \describe{
 ##'  \item{"theta"}{The (transformed) c-statistics. }
 ##'  \item{"theta.se"}{Standard errors of the (transformed) c-statistics.}
-##'  \item{"theta.CIl"}{Lower confidence interval of the (transformed) c-statistics. The level is specified in
+##'  \item{"theta.cilb"}{Lower confidence interval of the (transformed) c-statistics. The level is specified in
 ##'  \code{level}. Intervals are calculated on the same scale as \code{theta} by assuming a Normal distribution.}
-##'  \item{"theta.CIu"}{Upper confidence interval of the (transformed) c-statistics. The level is specified in
+##'  \item{"theta.ciub"}{Upper confidence interval of the (transformed) c-statistics. The level is specified in
 ##'  \code{level}. Intervals are calculated on the same scale as \code{theta} by assuming a Normal distribution.}
 ##'  \item{"theta.source"}{Method used for calculating the (transformed) c-statistic.}
 ##'  \item{"theta.se.source"}{Method used for calculating the standard error of the (transformed) c-statistic.}
@@ -78,12 +79,18 @@
 #' data(EuroSCORE)
 #' 
 #' # Calculate the c-statistic and its standard error
-#' ccalc(cstat=c.index, cstat.se=se.c.index, cstat.cilb=c.index.95CIl, cstat.ciub=c.index.95CIu, 
-#'       N=n, O=n.events, data=EuroSCORE, slab=Study)
+#' est1 <- ccalc(cstat = c.index, cstat.se = se.c.index, cstat.cilb = c.index.95CIl, 
+#'               cstat.ciub = c.index.95CIu, N = n, O = n.events, data = EuroSCORE, slab = Study)
+#' est1
 #'   
 #' # Calculate the logit c-statistic and its standard error
-#' ccalc(cstat=c.index, cstat.se=se.c.index, cstat.cilb=c.index.95CIl, cstat.ciub=c.index.95CIu, 
-#'       N=n, O=n.events, data=EuroSCORE, slab=Study, g="log(cstat/(1-cstat))")
+#' est2 <- ccalc(cstat = c.index, cstat.se = se.c.index, cstat.cilb = c.index.95CIl, 
+#'               cstat.ciub = c.index.95CIu, N = n, O = n.events, data = EuroSCORE, slab = Study, 
+#'               g = "log(cstat/(1-cstat))")
+#' est2
+#'       
+#' # Display the results of all studies in a forest plot
+#' plot(est1)
 #'                                                             
 #' @keywords meta-analysis discrimination concordance statistic performance
 #' 
@@ -92,7 +99,7 @@
 #' @export
 #' 
 ccalc <- function(cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv, sd.LP, N, O, Po, data, slab, subset,
-                  g=NULL, level=0.95, approx.se.method=4, ...) {
+                  g = NULL, level = 0.95, approx.se.method = 4, ...) {
   
   ### check if data argument has been specified
   if (missing(data))
@@ -275,10 +282,9 @@ ccalc <- function(cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv, sd.LP, N,
     
     
     # Store results, and method for calculating SE
-    ds <- data.frame(theta=theta, theta.se=sqrt(theta.var), theta.CIl=theta.cil, theta.CIu=theta.ciu, 
+    ds <- data.frame(theta=theta, theta.se=sqrt(theta.var), theta.cilb=theta.cil, theta.ciub=theta.ciu, 
                      theta.source=theta.source, theta.se.source=theta.var.source)
   
-    
     if(is.null(slab) & !no.data) {
       slab <- rownames(data)
       rownames(ds) <- slab
@@ -287,6 +293,13 @@ ccalc <- function(cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv, sd.LP, N,
       rownames(ds) <- slab
     }
     
+    # Add some attributes specifying the nature of the (untransformed) estimatess
+    attr(ds, 'estimand') <- "c-statistic"
+    attr(ds, 'theta_scale') <- g
+    attr(ds, 'plot_refline') <- 0.5
+    attr(ds, 'plot_lim') <- c(0,1)
+    
+    class(ds) <- c("mm_perf", class(ds))
     
     return(ds)
 }

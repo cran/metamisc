@@ -5,8 +5,8 @@
 \title{Display results from the funnel plot asymmetry test}
 \usage{
 \method{plot}{fat}(x, ref, confint = TRUE, confint.level = 0.1,
-  confint.col = "skyblue", confint.density = NULL, xlab = "Effect size",
-  ...)
+  confint.col = "skyblue", confint.density = NULL,
+  xlab = "Effect size", ...)
 }
 \arguments{
 \item{x}{An object of class \code{fat}}

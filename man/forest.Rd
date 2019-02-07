@@ -4,57 +4,21 @@
 \alias{forest}
 \title{Forest plot}
 \usage{
-forest(theta, theta.ci.lb, theta.ci.ub, theta.slab, theta.summary,
-  theta.summary.ci.lb, theta.summary.ci.ub, theta.summary.pi.lb,
-  theta.summary.pi.ub, title, sort = "asc", theme = theme_bw(),
-  predint.linetype = 1, xlim, xlab = "", refline = 0,
-  label.summary = "Summary Estimate", label.predint = "Prediction Interval",
-  ...)
+forest(...)
 }
 \arguments{
-\item{theta}{Numeric vector with effect size for each study}
-
-\item{theta.ci.lb}{Numeric vector specifying the lower bound of the confidence interval of the effect sizes}
-
-\item{theta.ci.ub}{Numeric vector specifying the upper bound of the confidence interval of the effect sizes}
-
-\item{theta.slab}{Character vector specifying the study labels}
-
-\item{theta.summary}{Meta-analysis summary estimate of the effect sizes}
-
-\item{theta.summary.ci.lb}{Lower bound of the confidence (or credibility) interval of the summary estimate}
-
-\item{theta.summary.ci.ub}{Upper bound of the confidence (or credibility) interval of the summary estimate}
-
-\item{theta.summary.pi.lb}{Lower bound of the (approximate) prediction interval of the summary estimate.}
-
-\item{theta.summary.pi.ub}{Upper bound of the (approximate) prediction interval of the summary estimate.}
-
-\item{title}{Title of the forest plot}
-
-\item{sort}{By default, studies are sorted by ascending effect size (\code{sort="asc"}). Set to \code{"desc"} for 
-sorting in reverse order, or any other value to ignore sorting.}
-
-\item{theme}{Theme to generate the forest plot. By default, the classic dark-on-light ggplot2 theme is used. 
-See \link[ggplot2]{theme_bw} for more information.}
-
-\item{predint.linetype}{The linetype of the prediction interval}
-
-\item{xlim}{The \code{x} limits \code{(x1, x2)} of the forest plot}
-
-\item{xlab}{Optional character string specifying the X label}
-
-\item{refline}{Optional numeric specifying a reference line}
-
-\item{label.summary}{Optional character string specifying the label for the summary estimate}
-
-\item{label.predint}{Optional character string specifying the label for the (approximate) prediction interval}
-
 \item{\dots}{Additional arguments, which are currently ignored.}
 }
 \description{
 Generate a forest plot by specifying the various effect sizes, confidence intervals and summary estimate.
 }
+\details{
+This is a generic function. See \link{forest.default} for making forest plots of summary statistics,
+\link{forest.metapred} for plotting \link{metapred} objects, and \link{forest.mp.cv.val} for plotting 
+\code{mp.cv.val} objects.
+}
 \author{
 Thomas Debray <thomas.debray@gmail.com>
+
+Valentijn de Jong <Valentijn.M.T.de.Jong@gmail.com>
 }
