@@ -43,7 +43,7 @@ test_that("Test whether Using the data argument yields the same results", {
 test_that("Test whether changing the parameters works", {
   
   fit.model <- "poisson/log"
-  fit <- with(EuroSCORE, valmeta(measure="OE", O=n.events, E=e.events, method="ML",
+  fit <- with(EuroSCORE, valmeta(measure="OE", O=n.events, E=e.events, method="ML", test="z",
                                  pars=list(model.oe=fit.model)))
   
   expect_equal(fit$model, fit.model)

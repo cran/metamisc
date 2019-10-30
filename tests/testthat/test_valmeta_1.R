@@ -84,6 +84,27 @@ test_that("Restoration of O and E should be correct", {
   
 })
 
+test_that("Use of Po.se should be correct", {
+  Po <- seq(0.01,1, 0.01)
+  Pe <- seq(1,0.01, -0.01)
+  ntype1 <- floor(length(Po)/2)
+  ntype2 <- length(Po)-ntype1
+  Po.se <- c(rep(0.02, ntype1), rep(0.03, ntype2))
+  
+  OE.se <- sqrt((Po.se**2)/(Pe**2)) # See equation 46 in BMJ paper
+  logOE.se <- sqrt((Po.se**2)/(Po**2)) # See equation 51 in BMJ paper
+  
+  ds <- oecalc(Po=Po, Pe=Pe, Po.se=Po.se)
+  
+  expect_equal(Po/Pe, ds$theta, tolerance=0.001)
+  expect_equal(OE.se, ds$theta.se, tolerance=0.001)
+  
+  ds <- oecalc(Po=Po, Pe=Pe, Po.se=Po.se, g="log(OE)")
+  
+  expect_equal(log(Po/Pe), ds$theta, tolerance=0.0001)
+  expect_equal(logOE.se, ds$theta.se, tolerance=0.0001)
+})
+
 
 test_that("Standard error of log O:E ratio", {
   

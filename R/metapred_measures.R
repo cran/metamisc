@@ -1,5 +1,6 @@
 # TODO:
 # add transforms to fema
+# add c-stat (and others) compatibility to ma(...)
 
 ##############################                Performance / error functions                  ###############################
 # ### By convention, all performance measures:
@@ -234,11 +235,17 @@ mean.abs <- function(object, ...)
 # Measure 1: Coefficient of variation (=scaled sd)
 # In general sense, abs needs not be TRUE, but for metapred it should,
 # such that higher values are worse performance.
-coef.var <- function(x, abs = TRUE, ...) {
-  x <- unlist(x) 
-  cv <- sd(x)/mean(x)
+coef.var <- function(object, abs = TRUE, ...) {
+  object <- unlist(object) 
+  cv <- sd(object)/mean(object)
   if (isTRUE(abs)) abs(cv) else cv
 }
+
+# coef.var <- function(x, abs = TRUE, ...) {
+#   x <- unlist(x) 
+#   cv <- sd(x)/mean(x)
+#   if (isTRUE(abs)) abs(cv) else cv
+# }
 
 # var.x.mean.with.se <- function(x, abs = TRUE, ...) {
 #   x <- unlist(x) 
@@ -310,13 +317,25 @@ fema <- function(object, ...) {
   sum(unlist(x) / unlist(v)) / sum(1/unlist(v))
 }
 
+
+# lambda defines the influence of the mean of performance, vs heterogeneity thereof.
+# 1 = mean of performance only
+# 0 = heterogeneity only
+# 1/2 = equal portions of both.
+rema <- function(object, method = "REML", lambda = 1, ...) {
+  if (!is.numeric(lambda) || lambda < 0 || lambda > 1)
+    stop(c("lambda must be a numeric ranging from 0 to 1."),  "\n * lambda was ", paste0(lambda), ".")
+  MA <- ma.perf(object, method = method, ...)
+  lambda * MA$est + (1- lambda) *MA$tau
+}
+
 rema.beta <- rema.mean <- function(object, method = "REML", ...) 
-  rema.perf(object, method = method, ...)$est
+  ma.perf(object, method = method, ...)$est
 
 # valmeta does not produce tau!
 # so rema.tau cannot be used on auc!
 rema.tau <- function(object, method = "REML", ...)
-  rema.perf(object, method = method, ...)$tau # Note: Intentionally selects tau2 if only that one is available.
+  ma.perf(object, method = method, ...)$tau # Note: Intentionally selects tau2 if only that one is available.
 
 # pooled.var <- function(x, n, ...) {
 #   x <- unlist(x)
@@ -345,24 +364,13 @@ mean.of.large <- function(object, ...) {
 #' @importFrom metafor rma.uni
 #' @export
 plot.listofperf <- function(x, pfn, ...) { # xlab tbi from perfFUN
-  # print("get perf name")
-  # print("pfn:")
-  # print(pfn)
-  # print("...:")
-  # print(list(...))
-  # if (!is.null(pfn <- list(...)$pfn) && is.character(pfn)) {
+
     xlab <- paste(pfn, "in validation strata")
-  # } else {
-    # xlab <- "Performance in validation strata."  
-  # }
-  # print("get strata names")
+
   if (is.null(names(x))) # The # is to show users that the numbers are not their own. (no longer necessary)
     names(x) <- paste("#", seq_along(x), sep = "") 
-  # print("compute ci now:")
   z <- ci.listofperf(object = x, ...)
-  # z <<- z
-  # print("meta-analyze performance:")
-  
+
   # Thomas: I changed the implementation to uvmeta to ensure our prediction intervals are bsaed on Student T distribution
   # and to ensure we are using REML everywhere.
   if (inherits(x[[1]], "auc")) { # To be replaced by child function.
@@ -411,33 +419,78 @@ plot.listofperf <- function(x, pfn, ...) { # xlab tbi from perfFUN
 plot.mp.cv.val <- function(x, y, ...)
   plot.listofperf(x$perf.full, x$perf.name, ...)
 
-rema.perf <- function(object, method = "REML", ...) {
+#' Random effects meta-analysis
+#' 
+#' Meta-analysis of the performance or coefficients of a metapred object.
+#' Caution: it is still under development.
+#' 
+#' @author Valentijn de Jong
+#'  
+#' @param object A model fit object, such as \link{metapred} object.
+#' @param method Character, method for meta-analysis passed to \link[metamisc]{valmeta} and \link[metamisc]{uvmeta}.
+#' Defaults to "REML".
+#' @param ... Other arguments passed to \link[metamisc]{metapred}, \link[metamisc]{valmeta} and \link[metamisc]{uvmeta}.
+#' 
+#' @details Produces different object types depending on input.
+#' 
+#' @export
+ma <- function(object, method, ...)
+  UseMethod("ma")
+
+#' @export
+ma.metapred <- function(object, method = "REML", select = "cv", ...)
+  ma(subset(object, select, ...), method = method, ...)
+
+#' @export
+ma.mp.cv.val <- function(object, method = "REML", ...)
+  ma(perf(object, ...), method = method, ...)
+
+#' @export
+ma.mp.global <- function(object, method = "REML", ...)
+  ma(object$stratified.fit, method = method, ...)
+  
+#' @export
+ma.mp.stratified.fit <- function(object, method = "REML", ...) {
+  m <- mp.meta.fit(object, meta.method = method, ...)
+  with(m, data.frame(coefficients, variances, se, ci.lb, ci.ub, tau2, se.tau2, pi.lb, pi.ub))
+}
+  
+
+#' @export
+ma.perf <- function(object, method = "REML", test = "knha", ...) {
   if (object$class[[1]] == "mp.perf" || object$class[[1]] == "recal") {
-    ma <- uvmeta(r = object[["estimate"]], r.vi = object$var, method = method) # uvmeta uses a Student T distribution, in contrast to metafor
-    return(list(est = ma$est,     
-                pi.lb = ma$pi.lb,
-                pi.ub = ma$pi.ub,
-                ci.lb = ma$ci.lb,
-                ci.ub = ma$ci.ub,
-                tau2  = ma$tau2,
-                tau   = sqrt(ma$tau2)))
+    # uvmeta uses a Student T distribution, in contrast to metafor
+    ma <- uvmeta(r = object[["estimate"]], r.vi = object$var, method = method, test = test) 
+    return(data.frame(est     = ma$est,
+                      se      = ma$se,
+                      ci.lb   = ma$ci.lb,
+                      ci.ub   = ma$ci.ub,
+                      # tau   = sqrt(ma$tau2),
+                      tau2    = ma$tau2,
+                      se.tau2 = ma$se.tau2,
+                      pi.lb   = ma$pi.lb,
+                      pi.ub   = ma$pi.ub))
   } else if (object$class[[1]] == "auc") {
-    ma <- valmeta(measure = "cstat", cstat = object[["estimate"]], 
+    # valmeta does not produce tau by default. But can be obtained from ma$fit if "ret.fit=T")
+    ma <- valmeta(measure = "cstat", cstat = object[["estimate"]], cstat.se = object[["se"]],
                   cstat.cilb = object[,"ci.lb"], cstat.ciub = object[,"ci.ub"],
-                  cstat.cilv = 0.95, method = method)
-    return(list(est = ma$est,
-                pi.lb = ma$pi.lb,
-                pi.ub = ma$pi.ub,
-                ci.lb = ma$ci.lb,
-                ci.ub = ma$ci.ub)) # valmeta does not produce tau! (but can be obtained from ma$fit if "ret.fit=T")
+                  method = method, ret.fit = TRUE, test = test)
+    return(data.frame(est     = ma$est,
+                      se      = ma$fit$se,
+                      ci.lb   = ma$ci.lb,
+                      ci.ub   = ma$ci.ub,
+                      # tau     = sqrt(ma$fit$tau2),
+                      tau2    = ma$fit$tau2,
+                      se.tau2 = ma$fit$se.tau2,
+                      pi.lb   = ma$pi.lb,
+                      pi.ub   = ma$pi.ub)) 
   }
+
   stop("class not recognized")
 }
 
-rema.mp.cv.val <- function(object, method = "REML", ...)
-  rema.perf(object[["perf"]], method = method)
-
-
+# ma.mp.cv.val <- function(object, method = "REML", ...) # old version, < 8 april 2019
+#   ma.perf(object[["perf"]], method = method, ...)
 
 #' Forest plot of a metapred fit
 #' 
@@ -483,6 +536,7 @@ forest.metapred <- function(object, perfFUN = 1, step = NULL, method = "REML", m
 #' @param method character string specifying whether a fixed- or a random-effects model should be used to summarize the
 #' prediction model performance. A fixed-effects model is fitted when using method="FE". Random-effects models are fitted 
 #' by setting method equal to one of the following: "DL", "HE", "SJ", "ML", "REML", "EB", "HS", or "GENQ". Default is "REML".
+#' @param xlab Label on x-axis. Defaults to the name of the performance function.
 #' @param ... Other arguments passed to plotting internals. E.g. \code{title}. See \link{forest.default} for details.
 #' 
 #' @aliases forest.mp.cv.val forest.perf
@@ -495,27 +549,29 @@ forest.metapred <- function(object, perfFUN = 1, step = NULL, method = "REML", m
 #               xlab = if (is.character(statistic)) statistic else
 #                 object[["perf.names"]][[statistic]], ...)
 
-forest.mp.cv.val <- function(object, perfFUN = 1, method = "REML", ...) 
-  forest.perf(perf(object, perfFUN = perfFUN, ...),
-              xlab = if (is.character(perfFUN)) perfFUN else
-                object$perf.names[[perfFUN]], method = method, ...)
+forest.mp.cv.val <- function(object, perfFUN = 1, method = "REML", xlab = NULL, ...) {
+    if (is.null(xlab))
+      xlab <- if (is.character(perfFUN)) perfFUN else  object$perf.names[[perfFUN]]
+  forest.perf(perf(object, perfFUN = perfFUN, ...), method = method, xlab = xlab, ...)
+}
+  
 
 forest.perf <- function(object, method = "REML", ...) {
   if (is.null(theta.slab <- list(...)$theta.slab))
     theta.slab <- as.character(object$val.strata)
-  ma <- rema.perf(object, method = method)
-  fp <- metamisc::forest(theta       = object[["estimate"]],
-                         theta.ci.lb = object$ci.lb,
-                         theta.ci.ub = object$ci.ub,
-                         theta.slab  = theta.slab,
-                         theta.summary       = ma$est,
-                         theta.summary.ci.lb = ma$ci.lb,
-                         theta.summary.ci.ub = ma$ci.ub,
-                         theta.summary.pi.lb = ma$pi.lb,
-                         theta.summary.pi.ub = ma$pi.ub,
-                         ...)
+  ma <- ma.perf(object, method = method)
+  fp <- forest(theta       = object[["estimate"]],
+               theta.ci.lb = object$ci.lb,
+               theta.ci.ub = object$ci.ub,
+               theta.slab  = theta.slab,
+               theta.summary       = ma$est,
+               theta.summary.ci.lb = ma$ci.lb,
+               theta.summary.ci.ub = ma$ci.ub,
+               theta.summary.pi.lb = ma$pi.lb,
+               theta.summary.pi.ub = ma$pi.ub,
+               ...)
   plot(fp)
-  invisible(NaN) # To be replaced with fp, when metapred() can handle it.
+  fp
 }
 # 
 # sampleBinary <- function(n = 50, J = 1, b = rep(log(2), J), alpha = NULL, col.names = NULL ) {

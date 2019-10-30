@@ -125,10 +125,13 @@
 ##' }
 #' @references 
 #' Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review and meta-analysis 
-#' of prediction model performance. BMJ. 2017;356:i6460.
+#' of prediction model performance. \emph{BMJ}. 2017;356:i6460.
 #' 
 #' Debray TPA, Damen JAAG, Riley R, Snell KIE, Reitsma JB, Hooft L, et al. A framework for meta-analysis of 
-#' prediction model studies with binary and time-to-event outcomes. Stat Methods Med Res. 2018; In press. 
+#' prediction model studies with binary and time-to-event outcomes. \emph{Stat Methods Med Res}. 2018; In press. 
+#' 
+#' Steyerberg EW, Nieboer D, Debray TPA, van Houwelingen HC. Assessment of heterogeneity in an individual participant
+#' data meta-analysis of prediction models: An overview and illustration. \emph{Stat Med}. 2019; In press.
 #' 
 #' Viechtbauer W. Conducting Meta-Analyses in R with the metafor Package. \emph{Journal of Statistical Software}. 
 #' 2010; 36(3). Available from: \url{http://www.jstatsoft.org/v36/i03/}

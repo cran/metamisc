@@ -4,7 +4,7 @@
 #' corresponding sampling variance. 
 #' 
 #' @param OE vector with the estimated ratio of total observed versus total expected events
-#' @param OE.se Optional vector with the standard errors of the estimated O:E ratios
+#' @param OE.se Optional vector with the standard errors of the estimated O:E ratios. 
 #' @param OE.cilb Optional vector to specify the lower limits of the confidence interval for \code{OE}.
 #' @param OE.ciub Optional vector to specify the upper limits of the confidence interval for \code{OE}.
 #' @param OE.cilv Optional vector to specify the levels of aformentioned confidence interval limits. 
@@ -17,7 +17,8 @@
 #' @param O Optional vector to specify the total number of observed events.
 #' @param E Optional vector to specify the total number of expected events
 #' @param Po Optional vector to specify the (cumulative) observed event probabilities.
-#' @param Po.se Optional vector with the standard errors of \code{Po}.
+#' @param Po.se Optional vector with the standard errors of \code{Po}. For time-to-event data, 
+#' these could also be the SE of the observed survival probabilities (e.g. as obtained from Kaplan-Meier analysis)
 #' @param Pe Optional vector to specify the (cumulative) expected event probabilites
 #' (if specified, during time \code{t.val})
 #' @param data Optional data frame containing the variables given to the arguments above.
@@ -178,6 +179,7 @@ oecalc <- function(OE, OE.se, OE.cilb, OE.ciub, OE.cilv, EO, EO.se, citl, citl.s
   if(is.null(N)) N <- rep(NA, times=k)
   if(is.null(Po)) Po <- rep(NA, times=k)
   if(is.null(Pe)) Pe <- rep(NA, times=k)
+  if(is.null(Po.se)) Po.se <- rep(NA, times=k)
   
   
   #######################################################################################
@@ -220,7 +222,8 @@ oecalc <- function(OE, OE.se, OE.cilb, OE.ciub, OE.cilv, EO, EO.se, citl, citl.s
   results[[8]] <- data.frame(est=resoe.O.Po.E(O=O, Po=Po, E=E, correction = add, g=g), method="O, E and Po") 
   results[[9]] <- data.frame(est=resoe.O.Pe.E(O=O, Pe=Pe, E=E, correction = add, g=g), method="O, E and Pe") 
   results[[10]] <- data.frame(est=resoe.O.E(O=O, E=E, correction = add, g=g), method="O and E")
-  results[[11]] <- data.frame(est=resoe.Po.Pe(Po=Po, Pe=Pe, g=g), method = "Po and Pe")
+  results[[11]] <- data.frame(est=resoe.Po.Pe.sePo(Po=Po, Pe=Pe, Po.se=Po.se, g=g), method = "Po, Pe and SE(Po)")
+  results[[12]] <- data.frame(est=resoe.Po.Pe(Po=Po, Pe=Pe, g=g), method = "Po and Pe")
 
 
   #t.citl   <- restore.oe.citl(citl=citl, citl.se=citl.se, O=O, Po=Po, N=N, t.extrapolate=t.extrapolate, t.ma=t.ma, t.val=t.val, 
@@ -345,6 +348,32 @@ resoe.O.Po.E <- function(O, Po, E, correction, g=NULL) {
 
 resoe.O.Pe.E <- function(O, Pe, E, correction, g=NULL) {
   return(resoe.O.E.N(O=O, E=E, N=E/Pe, correction=correction, g=g))
+}
+
+resoe.Po.Pe.sePo <- function(Po, Pe, Po.se, g=NULL) {
+  k <- length(Po)
+  out <- array(NA, dim=c(k,2))
+  
+  out[,1] <- Po/Pe
+  out[,2] <- Po.se**2/(Pe**2)
+  
+  if(is.null(g)) {
+    return (out)
+  }
+  
+  toe <- toe.var <- rep(NA, k) #Transformed OE and its error variance
+  
+  for (i in 1:k) {
+    oei <- out[i,1]
+    toe[i] <- eval(parse(text=g), list(OE = oei))
+    vi  <- out[i,2]
+    names(oei) <- names(vi) <- "OE"
+    toe.var[i] <- as.numeric((deltaMethod(object=oei, g=g, vcov.=vi))["SE"])**2
+  }
+  
+  out <- cbind(toe, toe.var)
+  return (out)
+  
 }
 
 resoe.EO.se  <- function(EO, EO.se, g=NULL) {

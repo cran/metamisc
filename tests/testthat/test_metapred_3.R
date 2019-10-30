@@ -30,18 +30,21 @@ folds <- metamisc:::l1o(st.u)
 ### Tests
 test_that("metapred handles options", {
   # Stepwise, default
-  expect_is(mp <- metamisc:::metapred(data = td, strata = "X4", scope = f, formula = X1 ~ 1, family = binomial), "metapred")
+  expect_is(mp <- metamisc:::metapred(data = td, strata = "X4", scope = f, formula = X1 ~ 1, family = binomial,
+                                      meta.method = "FE"), "metapred")
   expect_identical(mp$step.count, 2) # and: stop.reason == no improvement was possible, but that may change.
   expect_true(is.list(mp$stepwise))
   expect_true(is.list(mp$FUN))
   expect_true(is.call(mp$call))
   
   # Stepwise, stop because of step.count
-  expect_is(mp <- metapred(data = td, strata = "X4", scope = f, formula = X1 ~ 1, family = binomial, max.steps = 1), "metapred")
+  expect_is(mp <- metapred(data = td, strata = "X4", scope = f, formula = X1 ~ 1, family = binomial, max.steps = 1,
+                           meta.method = "FE"), "metapred")
   expect_identical(mp$step.count, 1)
   
   # No stepwise
-  expect_is(mp <- metapred(data = td, strata = "X4", scope = f, formula = f, family = binomial), "metapred")
+  expect_is(mp <- metapred(data = td, strata = "X4", scope = f, formula = f, family = binomial, meta.method = "FE"),
+            "metapred")
   expect_identical(mp$step.count, 0)
   
   # Possible frequent user mistake: wrong strata variable or it is missing from data.
@@ -52,17 +55,19 @@ test_that("metapred handles options", {
 
 test_that("metapred can handle different perfFUN", {
   expect_is(mp <- metamisc:::metapred(td, strata = "X4", scope = f, formula = f, family = binomial, perfFUN = "auc"
-                                      , selFUN = "which.max")
+                                      , selFUN = "which.max", meta.method = "FE")
             , "metapred")
 })
 
 test_that("metapred can handle multiple genFUN.", {
   genFUN <- list(abs.mean = "abs.mean", coef.var.mean = "coef.var.mean")
-  expect_is(mp <- metamisc:::metapred(data = td, strata = "X4", scope = f, formula = f, family = binomial, genFUN = genFUN)
+  expect_is(mp <- metamisc:::metapred(data = td, strata = "X4", scope = f, formula = f, family = binomial, 
+                                      genFUN = genFUN, meta.method = "FE")
             , "metapred")
   
   genFUN <- list(abs.mean = "abs.mean", nf = function(x, ...) NULL)
-  expect_is(mp <- metamisc:::metapred(data = td, strata = "X4", scope = f, formula = f, family = binomial, genFUN = genFUN)
+  expect_is(mp <- metamisc:::metapred(data = td, strata = "X4", scope = f, formula = f, family = binomial, 
+                                      genFUN = genFUN, meta.method = "FE")
             , "metapred")
   # genFUN <- list(abs.mean = "abs.mean", plot = "plot")
   # 
@@ -75,55 +80,62 @@ test_that("metapred can handle multiple genFUN.", {
 })
 
 test_that("metapred can handle different distributions.", {
-  expect_true(is.list(mp <- metapred(data = td, strata = "X4", family = binomial, max.steps = 0) )) # binomial
+  expect_true(is.list(mp <- metapred(data = td, strata = "X4", family = binomial, max.steps = 0, 
+                                     meta.method = "FE") )) # binomial
   expect_true(inherits(mp, "metapred"))
   expect_true(is.list(mp$stepwise))
   expect_true(is.list(mp$FUN))
   expect_true(is.call(mp$call))
 
-  expect_true(is.list(mp <- metapred(data = td, strata = "X4", family = binomial(link = "log"), max.steps = 0))) # binomial, loglink
+  expect_true(is.list(mp <- metapred(data = td, strata = "X4", family = binomial(link = "log"), max.steps = 0,
+                                     meta.method = "FE"))) # binomial, loglink
   expect_true(inherits(mp, "metapred"))
   expect_true(is.list(mp$stepwise))
   expect_true(is.list(mp$FUN))
   expect_true(is.call(mp$call))
 
-  expect_true(is.list(mp <- metapred(data = td, strata = "X4", max.steps = 0))) # gaussian
+  expect_true(is.list(mp <- metapred(data = td, strata = "X4", max.steps = 0, meta.method = "FE"))) # gaussian
   expect_true(inherits(mp, "metapred"))
   expect_true(is.list(mp$stepwise))
   expect_true(is.list(mp$FUN))
   expect_true(is.call(mp$call))
 
-  expect_true(is.list(mp <- metapred(data = td.ig, strata = "X4", family = Gamma, max.steps = 0))) # Gamma
+  expect_true(is.list(mp <- metapred(data = td.ig, strata = "X4", family = Gamma, max.steps = 0, meta.method = "FE"))) # Gamma
   expect_true(inherits(mp, "metapred"))
   expect_true(is.list(mp$stepwise))
   expect_true(is.list(mp$FUN))
   expect_true(is.call(mp$call))
 
-  expect_true(is.list(mp <- metapred(data = td.ig, strata = "X4", family = inverse.gaussian, max.steps = 0))) # inverse.gaussian
+  expect_true(is.list(mp <- metapred(data = td.ig, strata = "X4", family = inverse.gaussian, max.steps = 0, 
+                                     meta.method = "FE"))) # inverse.gaussian
   expect_true(inherits(mp, "metapred"))
   expect_true(is.list(mp$stepwise))
   expect_true(is.list(mp$FUN))
   expect_true(is.call(mp$call))
 
-  expect_true(is.list(mp <- metapred(data = td, strata = "X4", family = poisson, max.steps = 0))) # poisson
+  expect_true(is.list(mp <- metapred(data = td, strata = "X4", family = poisson, max.steps = 0, 
+                                     meta.method = "FE"))) # poisson
   expect_true(inherits(mp, "metapred"))
   expect_true(is.list(mp$stepwise))
   expect_true(is.list(mp$FUN))
   expect_true(is.call(mp$call))
 
-  expect_true(is.list(mp <- metapred(data = td, strata = "X4", family = quasi, max.steps = 0))) # quasi
+  expect_true(is.list(mp <- metapred(data = td, strata = "X4", family = quasi, max.steps = 0, meta.method = "FE"
+                                     ))) # quasi
   expect_true(inherits(mp, "metapred"))
   expect_true(is.list(mp$stepwise))
   expect_true(is.list(mp$FUN))
   expect_true(is.call(mp$call))
 
-  expect_true(is.list(mp <- metapred(data = td, strata = "X4", family = quasibinomial, max.steps = 0))) # quasibinomial
+  expect_true(is.list(mp <- metapred(data = td, strata = "X4", family = quasibinomial, max.steps = 0, 
+                                     meta.method = "FE"))) # quasibinomial
   expect_true(inherits(mp, "metapred"))
   expect_true(is.list(mp$stepwise))
   expect_true(is.list(mp$FUN))
   expect_true(is.call(mp$call))
 
-  expect_true(is.list(mp <- metapred(data = td, strata = "X4", family = quasipoisson, max.steps = 0))) # quasipoisson
+  expect_true(is.list(mp <- metapred(data = td, strata = "X4", family = quasipoisson, max.steps = 0, 
+                                     meta.method = "FE"))) # quasipoisson
   expect_true(inherits(mp, "metapred"))
   expect_true(is.list(mp$stepwise))
   expect_true(is.list(mp$FUN))
@@ -132,29 +144,30 @@ test_that("metapred can handle different distributions.", {
 
 test_that("metapred's stepwise is WAD.", {
   # One is selected due to random fluctuation.
-  expect_is(mp <- metamisc:::metapred(data = td, strata = "X4"), "metapred")
+  expect_is(mp <- metamisc:::metapred(data = td, strata = "X4", meta.method = "FE"), "metapred")
   expect_length(coef(mp), 2) 
   
   # None are selected, because the data is pure noise.
   set.seed(324234)
   td.none <- data.frame(matrix(rbinom(n * (n.cov + 1), 1, .5), ncol = n.cov + 1, nrow = n))
-  expect_is(mp <- metamisc:::metapred(data = td.none, strata = "X4" ), "metapred") 
+  expect_is(mp <- metamisc:::metapred(data = td.none, strata = "X4", meta.method = "FE"), "metapred") 
   expect_length(coef(mp), 1) 
   
   # All are selected, as predictors are good predictors.
   td.all <- data.frame(matrix(rbinom(n * (n.cov + 1), 1, .5), ncol = n.cov + 1, nrow = n))
   td.all[ , 1] <- rowSums(td.all)
-  expect_is(mp <- metamisc:::metapred(data = td.all, strata = "X4" ), "metapred")
+  expect_is(mp <- metamisc:::metapred(data = td.all, strata = "X4", meta.method = "FE"), "metapred")
   expect_length(coef(mp), 3) 
   
   # All noise predictors are selected, because stepwise = F.
   expect_is(mp <- metamisc:::metapred(data = td.none, strata = "X4", 
-                                                formula = f, scope = f ), "metapred")
+                                      formula = f, scope = f, meta.method = "FE"), "metapred")
   expect_length(coef(mp), 3)  
 })
 
 # formula of glm is specific for this data, seed and test!
-mp <- metapred(data = td, strata = "X2", family = binomial(link = "log"), formula = X3 ~ X1 + X4, center = TRUE)
+mp <- metapred(data = td, strata = "X2", family = binomial(link = "log"), formula = X3 ~ X1 + X4, 
+               center = TRUE, meta.method = "FE")
 gl <- glm(formula = X3 ~ X1, data = td, family = binomial(link = "log"))
 
 test_that("metapred S3 methods work.", {
@@ -178,7 +191,8 @@ test_that("metapred S3 methods work.", {
   # This is to prevent a previous bug from reappearing
   # If the order of formla does not match that of data, it needs to be reordered internally
   # This can give issues when centering.
-  expect_is(mp <- metapred(data = td, strata = "X2", formula = X3 ~ X1 + X4, family = binomial, center = TRUE), "metapred")
+  expect_is(mp <- metapred(data = td, strata = "X2", formula = X3 ~ X1 + X4, family = binomial, center = TRUE
+                           , meta.method = "FE"), "metapred")
   
   # coef
   expect_true(is.numeric(coef(mp)))

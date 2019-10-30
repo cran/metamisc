@@ -11,7 +11,7 @@ oecalc(OE, OE.se, OE.cilb, OE.ciub, OE.cilv, EO, EO.se, citl, citl.se, N,
 \arguments{
 \item{OE}{vector with the estimated ratio of total observed versus total expected events}
 
-\item{OE.se}{Optional vector with the standard errors of the estimated O:E ratios}
+\item{OE.se}{Optional vector with the standard errors of the estimated O:E ratios.}
 
 \item{OE.cilb}{Optional vector to specify the lower limits of the confidence interval for \code{OE}.}
 
@@ -36,7 +36,8 @@ oecalc(OE, OE.se, OE.cilb, OE.ciub, OE.cilv, EO, EO.se, citl, citl.se, N,
 
 \item{Po}{Optional vector to specify the (cumulative) observed event probabilities.}
 
-\item{Po.se}{Optional vector with the standard errors of \code{Po}.}
+\item{Po.se}{Optional vector with the standard errors of \code{Po}. For time-to-event data, 
+these could also be the SE of the observed survival probabilities (e.g. as obtained from Kaplan-Meier analysis)}
 
 \item{Pe}{Optional vector to specify the (cumulative) expected event probabilites
 (if specified, during time \code{t.val})}

@@ -11,8 +11,8 @@ performance(object, ...)
 \arguments{
 \item{object}{A model fit object, either a \link{metapred} or \code{subset(metapred)} object.}
 
-\item{...}{By default, the final model is selected. This parameter allows other arguments passed 
-to \link{subset.metapred} such that the performance estimates of other steps/models may be
+\item{...}{By default, the final model is selected. This parameter allows other arguments to be
+passed to \link{subset.metapred} such that the performance estimates of other steps/models may be
 returned..}
 }
 \description{

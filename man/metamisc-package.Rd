@@ -8,8 +8,8 @@
 %\tabular{ll}{
 %Package: \tab metamisc\cr
 %Type: \tab Package\cr
-%Version: \tab 0.2.0\cr
-%Date: \tab 2019-2-6\cr
+%Version: \tab 0.2.1\cr
+%Date: \tab 2019-10-25\cr
 %License: \tab GPL-2 \cr
 %}
 The following functionality is currently implemented: univariate meta-analysis of summary data (\code{\link{uvmeta}}), bivariate meta-analysis of correlated outcomes (\code{\link{riley}}), meta-analysis of prediction model performance (\code{\link{valmeta}}), evaluation of funnel plot asymmetry (\code{\link{fat}}). \cr
@@ -20,7 +20,7 @@ The \code{metamisc} package also provides a comprehensive framework for developi
 \author{Thomas Debray <thomas.debray@gmail.com>, Valentijn de Jong <Valentijn.M.T.de.Jong@gmail.com>}
 
 \references{
-Debray TPA, Moons KGM, Ahmed I, Koffijberg H, Riley RD. A frameworR Style Guide - make your R code easier to read, share, and verifyk for developing, implementing, and evaluating clinical prediction models in an individual participant data meta-analysis. Stat Med. 2013;32(18):3158--80. 
+Debray TPA, Moons KGM, Ahmed I, Koffijberg H, Riley RD. A framework for developing, implementing, and evaluating clinical prediction models in an individual participant data meta-analysis. Stat Med. 2013;32(18):3158--80. 
 
 Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review and meta-analysis of prediction model performance. BMJ. 2017;356:i6460. 
 

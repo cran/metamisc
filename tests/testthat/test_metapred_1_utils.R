@@ -40,8 +40,8 @@ test_that ("Multivariate meta-analysis works", {
   m_fit <- rma.mv(yi = y, V = m_block, mods = ~ -1+group, random = ~ group|study, struct= "UN", data = m_dat)
 
   mrma_fit <- mrma(coefficients = y, vcov = m_full)
-  expect_identical(as.numeric(coefficients(m_fit)["groupAL"]), as.numeric(mrma_fit$coefficients["groupAL"]))
-  expect_identical(as.numeric(coefficients(m_fit)["groupPD"]), as.numeric(mrma_fit$coefficients["groupPD"]))
+  expect_equal(as.numeric(coefficients(m_fit)["groupAL"]), as.numeric(mrma_fit$coefficients["groupAL"])) # Was expect_identical
+  expect_equal(as.numeric(coefficients(m_fit)["groupPD"]), as.numeric(mrma_fit$coefficients["groupPD"])) # Was expect_identical
   
   # Compare results with mvmeta
   # mvmeta(cbind(PD,AL),S=berkey98[5:7],data=berkey98)

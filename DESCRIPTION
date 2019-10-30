@@ -1,8 +1,8 @@
 Package: metamisc
 Type: Package
 Title: Diagnostic and Prognostic Meta-Analysis
-Version: 0.2.0
-Date: 2019-2-6
+Version: 0.2.1
+Date: 2019-10-25
 Authors@R: c(person(given = "Thomas", family = "Debray", role = c("aut", "cre"), 
                     email = "thomas.debray@gmail.com", comment="http://orcid.org/0000-0002-1790-2719"), 
             person(given = "Valentijn", family = "de Jong", role = "aut", 
@@ -12,7 +12,7 @@ Description: Meta-analysis of diagnostic and prognostic modeling studies. Summar
     combine published prediction models. Develop new prediction models with data from multiple studies. 
 Imports: metafor (>= 2.0.0), mvtnorm, lme4, plyr, methods, pROC,
         ggplot2
-Depends: R (>= 3.2.0), stats, graphics
+Depends: R (>= 3.5.0), stats, graphics
 Suggests: runjags, rjags, logistf (>= 1.23), testthat (>= 1.0.2)
 License: GPL-3
 URL: http://r-forge.r-project.org/projects/metamisc/
@@ -22,8 +22,8 @@ Author: Thomas Debray [aut, cre] (<https://orcid.org/0000-0002-1790-2719>),
 Maintainer: Thomas Debray <thomas.debray@gmail.com>
 Repository: CRAN
 Repository/R-Forge/Project: metamisc
-Repository/R-Forge/Revision: 532
-Repository/R-Forge/DateTimeStamp: 2019-02-06 18:46:50
-Date/Publication: 2019-02-07 08:50:03 UTC
+Repository/R-Forge/Revision: 547
+Repository/R-Forge/DateTimeStamp: 2019-10-28 15:52:05
+Date/Publication: 2019-10-30 11:00:02 UTC
 NeedsCompilation: no
-Packaged: 2019-02-06 19:17:04 UTC; rforge
+Packaged: 2019-10-28 16:10:11 UTC; rforge

@@ -14,11 +14,14 @@ center <- function(x, center.in) {
 
 
 # Center covariates within clusters
+#
+# Centers all except for y.name and cluster.name
+#
 # data data.frame
 # y.name character, name of outcome variable
 # cluster.name character, name of cluster variable.
 centerCovs <- function(data, y.name, cluster.name) {
-  to.center <- which((!(colnames(data) == cluster.name | colnames(data) == y.name) ) & sapply(data, is.numeric))
+  to.center <- which((!(colnames(data) %in% cluster.name | colnames(data) %in% y.name) ) & sapply(data, is.numeric))
   cluster.vec <- data[ , cluster.name]
   
   for (col in to.center)
@@ -210,7 +213,13 @@ getPredictMethod <- function(fit, two.stage = TRUE, predFUN = NULL, ...) {
       return(predictGLM)
     stop("No prediction method has been implemented for this model type yet for two-stage
          meta-analysis. You may supply one with the predFUN argument.")
-  } 
+  } else {
+    if (any(fit$cv[[1]]$stratum.class %in% c("logistf")))
+      return(predictlogistf)
+    
+    if (any(fit$cv[[1]]$stratum.class %in% c("glm", "lm")))
+      return(predictGLM)
+  }
   
   # Return default predict function if everything else fails
   return(predict)
@@ -227,9 +236,7 @@ predictGLM <- function(object, newdata, b = NULL, f = NULL, type = "response", .
   if (is.null(b)) b <- coef(object)
   if (is.null(f)) f <- formula(object)
   X <- model.matrix(f2rhsf(stats::as.formula(f)), data = newdata)
-  # X <<- X
-  # b <<- b
-  
+
   lp <- X %*% b
   
   if (identical(type, "response")) {
@@ -287,32 +294,107 @@ logistfirth <- function(formula = attr(data, "formula"), data = sys.parent(), pl
 # vcov Ignored. For compatibility only, until a better solution is implemented.
 # ... Optional arguments for rma().
 #' @importFrom metafor rma
-urma <- function(coefficients, variances, method = "DL", vcov = NULL, ...)
-{
+# urma <- function(coefficients, variances, method = "DL", vcov = NULL, ...)
+# {
+#   if (!(is.data.frame(coefficients) || is.matrix(coefficients)) || !(is.data.frame(variances) || is.matrix(variances)) )
+#     stop("coefficients and variances must both be a data.frame or matrix.")
+#   if (!identical(dim(coefficients), dim(variances)))
+#     stop("coefficients and variances must have the same dimensions.")
+# 
+#   # Gives error (below, not here ofc)
+#   # meta.b <- meta.se <- meta.tau2 <- meta.ci.lb <- meta.ci.ub <- meta.se.tau2 <- meta.pi.lb <- meta.pi.ub <- 
+#   #   rep(NA, ncol(coefficients))
+#   # meta.pi <- matrix(nrow = 2, ncol = ncol(coefficients))
+#   meta.b <- meta.se <- meta.tau2 <- rep(NA, ncol(coefficients))
+#   # meta.pi <- matrix(nrow = 2, ncol = ncol(coefficients))
+#   for (col in seq_len(ncol(coefficients))) {
+#     tryCatch(
+#       r <- metafor::rma(coefficients[ , col] , variances[ , col], method = method, ...),
+#       error = function(e) {
+#         stop(paste("Error in univariate rma of variable:", names(coefficients)[col], ",as follows:", e))
+#         }
+#     )
+#     
+#     meta.b[col]  <- r$beta
+#     meta.se[col] <- r$se
+#     meta.tau2[col] <- r$tau2
+#     
+#     # Gives error:
+#     # meta.b[col]  <- r$beta
+#     # meta.se[col] <- r$se
+#     # meta.ci.lb[col] <- r$ci.lb
+#     # meta.ci.ub[col] <- r$ci.ub
+#     # meta.tau2[col] <- r$tau2
+#     # meta.pi.lb[col] <- r$cr.lb
+#     # meta.pi.ub[col] <- r$cr.ub
+#     
+#     # Warning because this is highly unexpected!
+#     # checks because otherwise an error is returned.
+#     if (!identical(r$method, method))
+#       warning(paste("metafor::rma switched automatically from ", method, " to ", r$method, " method.", sep = ""))
+# 
+#     # if (!identical(r$method, "FE")) {
+#     #   cr <- metafor::predict.rma(r)
+#     #   meta.pi[1, col] <- cr$cr.lb
+#     #   meta.pi[2, col] <- cr$cr.ub
+#     # }
+#   }
+# 
+#   meta.v <- meta.se^2
+#   # rownames(meta.pi) <- c("pi.lb", "pi.ub")
+#   # colnames(meta.pi) <- names(meta.b) <- names(meta.v) <- names(meta.se) <- names(meta.tau2) <- colnames(coefficients)
+# 
+#   list(coefficients = meta.b, variances = meta.v, se = meta.se, tau2 = meta.tau2, tau = sqrt(meta.tau2), 
+#         method = r$method)
+# }
+
+urma <- function(coefficients, variances, method = "DL", vcov = NULL, ...) {
   if (!(is.data.frame(coefficients) || is.matrix(coefficients)) || !(is.data.frame(variances) || is.matrix(variances)) )
     stop("coefficients and variances must both be a data.frame or matrix.")
   if (!identical(dim(coefficients), dim(variances)))
     stop("coefficients and variances must have the same dimensions.")
-  
-  meta.b <- meta.se <- meta.tau2 <- rep(NA, ncol(coefficients))
-  for (col in 1:ncol(coefficients)) {
+
+  meta.b <- meta.se <- meta.tau2 <- meta.ci.lb <- meta.ci.ub <- meta.pi.lb <- meta.pi.ub <-
+    meta.se.tau2 <- rep(NA, ncol(coefficients))
+
+  for (col in seq_len(ncol(coefficients))) {
     tryCatch(
       r <- metafor::rma(coefficients[ , col] , variances[ , col], method = method, ...),
       error = function(e) {
         stop(paste("Error in univariate rma of variable:", names(coefficients)[col], ",as follows:", e))
-        }
+      }
     )
-    
-    meta.b[col]  <- r$beta
-    meta.se[col] <- r$se
-    meta.tau2[col] <- r$tau2
+
+    meta.b[col]     <- r$beta
+    meta.se[col]    <- r$se
+    meta.tau2[col]  <- r$tau2
+    meta.ci.lb[col] <- r$ci.lb
+    meta.ci.ub[col] <- r$ci.ub
+
+    # Warning because this is highly unexpected!
+    # rma may change to fixed effects under unknown conditions (probably low sample size/ low number of clusters)
+    # checks because otherwise an error is returned.
+    if (!identical(r$method, method))
+      warning(paste("metafor::rma switched automatically from ", method, " to ", r$method, " method.", sep = ""))
+
+    if (!identical(r$method, "FE")) {
+      cr <- metafor::predict.rma(r)
+      meta.pi.lb[col] <- cr$cr.lb
+      meta.pi.ub[col] <- cr$cr.ub
+      meta.se.tau2[col] <- r$se.tau2
+    }
   }
-  
+
   meta.v <- meta.se^2
-  
-  names(meta.b) <- names(meta.v) <- names(meta.se) <- names(meta.tau2) <- colnames(coefficients)
-  list(coefficients = meta.b, variances = meta.v, se = meta.se, tau2 = meta.tau2, tau = sqrt(meta.tau2))
+    names(meta.b) <- names(meta.v) <- names(meta.se) <- names(meta.tau2) <-  names(meta.ci.lb) <- 
+      names(meta.ci.ub) <- names(meta.pi.lb) <-  names(meta.pi.ub) <- colnames(coefficients)
+
+  list(coefficients = meta.b, variances = meta.v, se = meta.se, ci.lb = meta.ci.lb, ci.ub = meta.ci.ub,
+       tau2 = meta.tau2, se.tau2 = meta.se.tau2, tau = sqrt(meta.tau2), 
+       pi.lb = meta.pi.lb, pi.ub = meta.pi.ub, method = r$method)
 }
+
+
 
 # Multivariate Random Effects Meta-Analysis
 # coefficients data.frame or matrix, containing coef
@@ -341,6 +423,8 @@ urma <- function(coefficients, variances, method = "DL", vcov = NULL, ...)
 #       psi = ma.fit$Psi)
 #}
 
+
+# What is this?
 blockMatrixDiagonal <- function(...){  
   matrixList <- list(...)
   if(is.list(matrixList[[1]])) matrixList <- matrixList[[1]]

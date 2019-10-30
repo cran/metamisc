@@ -21,7 +21,7 @@ outcome variable should be \code{numeric} or coercible to numeric by as.numeric(
 using terms of \code{scope}. Defaults to full main effects model, where the first column in \code{data} is assumed to be
 the outcome and all remaining columns (except \code{strata}) predictors. See \link[stats]{formula} for formulas in general.}
 
-\item{estFUN}{Function for estimating the model in the first stage. Currently "lm" and "glm" are supported.}
+\item{estFUN}{Function for estimating the model in the first stage. Currently "lm", "glm" and "logistfirth" are supported.}
 
 \item{scope}{\code{formula}. The difference between \code{formula} and \code{scope} defines the range of models examined in the 
 stepwise search. Defaults to NULL, which leads to the intercept-only model. If \code{scope} is not nested in \code{formula}, 

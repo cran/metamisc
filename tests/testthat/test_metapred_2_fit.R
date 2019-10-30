@@ -27,7 +27,9 @@ test_that("Stratified models can be estimated and MA.", {
   # Note: this essentially yields the global model
   expect_is(meta.fit <- mp.meta.fit(stratified.fit, urma), "mp.meta.fit")
   expect_length(coef(meta.fit), 3)
-  expect_is(cv.meta.fit <- mp.cv.meta.fit(stratified.fit = stratified.fit, folds = folds, metaFUN = urma), "mp.cv.meta.fit")
+  # FE because rma automatically switches to FE for this sample anyways
+  expect_is(cv.meta.fit <- mp.cv.meta.fit(stratified.fit = stratified.fit, folds = folds, metaFUN = urma,
+                                          meta.method = "FE"), "mp.cv.meta.fit") 
   expect_equal(dim(coef(cv.meta.fit)), c(length(unique(td[["X4"]])), ncol(td) - 1) )
   
   # Recal of MA
