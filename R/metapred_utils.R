@@ -523,14 +523,17 @@ get.function <- function(x, ...) {
 
 
 ### Maybe this is futile:
-#' @author Valentijn de Jong
-#' @method nobs   survreg
-#' @export
-nobs.survreg <- function(object, ...)
-  object$N
+# TD: adding this code gives me a warning on CRAN
+# Registered S3 method from a standard package overwritten by 'metamisc':
+# method from  nobs.survreg survival
+#' author Valentijn de Jong
+#' method nobs   survreg
+#' export
+#nobs.survreg <- function(object, ...)
+#  object$N
 
-#' @author Valentijn de Jong
-#' @method nobs   flexsurvreg
-#' @export
-nobs.flexsurvreg <- function(object, ...)
-  object$N
+#' author Valentijn de Jong
+#' method nobs   flexsurvreg
+#' export
+#nobs.flexsurvreg <- function(object, ...)
+#  object$N

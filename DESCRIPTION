@@ -1,8 +1,8 @@
 Package: metamisc
 Type: Package
 Title: Diagnostic and Prognostic Meta-Analysis
-Version: 0.2.1
-Date: 2019-10-25
+Version: 0.2.2
+Date: 2019-11-08
 Authors@R: c(person(given = "Thomas", family = "Debray", role = c("aut", "cre"), 
                     email = "thomas.debray@gmail.com", comment="http://orcid.org/0000-0002-1790-2719"), 
             person(given = "Valentijn", family = "de Jong", role = "aut", 
@@ -22,8 +22,8 @@ Author: Thomas Debray [aut, cre] (<https://orcid.org/0000-0002-1790-2719>),
 Maintainer: Thomas Debray <thomas.debray@gmail.com>
 Repository: CRAN
 Repository/R-Forge/Project: metamisc
-Repository/R-Forge/Revision: 547
-Repository/R-Forge/DateTimeStamp: 2019-10-28 15:52:05
-Date/Publication: 2019-10-30 11:00:02 UTC
+Repository/R-Forge/Revision: 548
+Repository/R-Forge/DateTimeStamp: 2019-11-08 14:42:26
+Date/Publication: 2019-11-10 09:10:02 UTC
 NeedsCompilation: no
-Packaged: 2019-10-28 16:10:11 UTC; rforge
+Packaged: 2019-11-08 14:50:12 UTC; rforge
