@@ -4,8 +4,15 @@
 \alias{fitted.metapred}
 \title{Extract Model Fitted Values}
 \usage{
-\method{fitted}{metapred}(object, select = "cv", step = NULL,
-  model = NULL, as.stratified = TRUE, type = "response", ...)
+\method{fitted}{metapred}(
+  object,
+  select = "cv",
+  step = NULL,
+  model = NULL,
+  as.stratified = TRUE,
+  type = "response",
+  ...
+)
 }
 \arguments{
 \item{object}{object of class metapred}

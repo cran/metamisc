@@ -18,6 +18,34 @@ generateMCMCinits <- function(n.chains, model.pars)
   return(inits)
 }
 
+#' Convert a correlation matrix into a covariance matrix
+#'
+#' @param sigma vector of standard deviations. The order of standard deviations should correspond to the column order in 'cormat'.
+#' @param cormat a symmetric numeric correlation matrix
+#' @return The covariance matrix
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' 
+#' @export
+cor2cov <- function(sigma, cormat) {
+  if (length(sigma) != nrow(cormat) & length(sigma) != ncol(cormat)) {
+    stop ("Incompatible dimensions for 'sigma' and 'cormat'")
+  }
+  
+  # Check if cormat is symmetric
+  if (!isSymmetric(cormat)) {
+    stop ("The correlation matrix is not symmetric!")
+  }
+  
+  # Check if the correlation matrix is valid
+  if (any(eigen(cormat)$values <= 0 )) {
+    stop("The correlation matrix is not positive semidefinite!")
+  }
+  
+  D <- diag(sigma)
+  vmat <- D %*% cormat %*% D
+  vmat
+}
+
 
 rstudentt <- function(n, mean, sigma, df, lower, upper) {
   #non-truncated student t

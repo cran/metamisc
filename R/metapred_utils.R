@@ -49,7 +49,7 @@ getFoldName <- function(st.u, f = NULL, type = NULL) {
   else 
     paste(getclName(st.u = st.u), getcvName(f = f, type = type), sep = if (length(f) > 0 || length(type) > 0) ". " else "")
 }
-  
+
 
 # getclName <- function(st.u)
 #   paste("cl", toString(st.u), sep = " ")
@@ -236,7 +236,7 @@ predictGLM <- function(object, newdata, b = NULL, f = NULL, type = "response", .
   if (is.null(b)) b <- coef(object)
   if (is.null(f)) f <- formula(object)
   X <- model.matrix(f2rhsf(stats::as.formula(f)), data = newdata)
-
+  
   lp <- X %*% b
   
   if (identical(type, "response")) {
@@ -262,12 +262,12 @@ predictlogistf <- function(object, newdata, b = NULL, f = NULL, type = "response
 ### Note: cal.int does not work with this function. Use bin.cal.int instead.
 # normal.int logical Should the intercept be recalibrated, such that Firth's correction
 # is removed from it?
-logistfirth <- function(formula = attr(data, "formula"), data = sys.parent(), pl = TRUE,
+logistfirth <- function(formula = attr(data, "formula"), data = parent.frame(), pl = TRUE,
                         alpha = 0.05, control, plcontrol, firth = TRUE, init,
                         plconf = NULL, dataout = TRUE, ...) {
   if(is.null(normal.int <- list(...)$normal.int) ) normal.int <- FALSE
   if(is.null(fallback   <- list(...)$fallback)   ) fallback <- TRUE
-
+  
   if (fallback && length(f2tl(formula)) < 1) 
     pl <- FALSE
   
@@ -275,11 +275,11 @@ logistfirth <- function(formula = attr(data, "formula"), data = sys.parent(), pl
   if (!requireNamespace("logistf", quietly = TRUE)) {
     stop("The package 'logistf' is currently not installed!")
   } 
-    
+  
   fit <- logistf::logistf(formula = formula, data = data, pl = pl,
-                 alpha = alpha, control = control, plcontrol = plcontrol,
-                 firth = firth, init = init,
-                 plconf = plconf, dataout = dataout, ...)
+                          alpha = alpha, control = control, plcontrol = plcontrol,
+                          firth = firth, init = init,
+                          plconf = plconf, dataout = dataout, ...)
   
   fit$family <- binomial()
   if (normal.int)
@@ -353,10 +353,10 @@ urma <- function(coefficients, variances, method = "DL", vcov = NULL, ...) {
     stop("coefficients and variances must both be a data.frame or matrix.")
   if (!identical(dim(coefficients), dim(variances)))
     stop("coefficients and variances must have the same dimensions.")
-
+  
   meta.b <- meta.se <- meta.tau2 <- meta.ci.lb <- meta.ci.ub <- meta.pi.lb <- meta.pi.ub <-
     meta.se.tau2 <- rep(NA, ncol(coefficients))
-
+  
   for (col in seq_len(ncol(coefficients))) {
     tryCatch(
       r <- metafor::rma(coefficients[ , col] , variances[ , col], method = method, ...),
@@ -364,19 +364,19 @@ urma <- function(coefficients, variances, method = "DL", vcov = NULL, ...) {
         stop(paste("Error in univariate rma of variable:", names(coefficients)[col], ",as follows:", e))
       }
     )
-
+    
     meta.b[col]     <- r$beta
     meta.se[col]    <- r$se
     meta.tau2[col]  <- r$tau2
     meta.ci.lb[col] <- r$ci.lb
     meta.ci.ub[col] <- r$ci.ub
-
+    
     # Warning because this is highly unexpected!
     # rma may change to fixed effects under unknown conditions (probably low sample size/ low number of clusters)
     # checks because otherwise an error is returned.
     if (!identical(r$method, method))
       warning(paste("metafor::rma switched automatically from ", method, " to ", r$method, " method.", sep = ""))
-
+    
     if (!identical(r$method, "FE")) {
       cr <- metafor::predict.rma(r)
       meta.pi.lb[col] <- cr$cr.lb
@@ -384,11 +384,11 @@ urma <- function(coefficients, variances, method = "DL", vcov = NULL, ...) {
       meta.se.tau2[col] <- r$se.tau2
     }
   }
-
+  
   meta.v <- meta.se^2
-    names(meta.b) <- names(meta.v) <- names(meta.se) <- names(meta.tau2) <-  names(meta.ci.lb) <- 
-      names(meta.ci.ub) <- names(meta.pi.lb) <-  names(meta.pi.ub) <- colnames(coefficients)
-
+  names(meta.b) <- names(meta.v) <- names(meta.se) <- names(meta.tau2) <-  names(meta.ci.lb) <- 
+    names(meta.ci.ub) <- names(meta.pi.lb) <-  names(meta.pi.ub) <- colnames(coefficients)
+  
   list(coefficients = meta.b, variances = meta.v, se = meta.se, ci.lb = meta.ci.lb, ci.ub = meta.ci.ub,
        tau2 = meta.tau2, se.tau2 = meta.se.tau2, tau = sqrt(meta.tau2), 
        pi.lb = meta.pi.lb, pi.ub = meta.pi.ub, method = r$method)
@@ -444,7 +444,7 @@ blockMatrixDiagonal <- function(...){
 ## vcov is a 3-dimensional array, where [,,i] indicates the within-study covariance of study i
 mrma <- function(coefficients, vcov, variances,  ...) {
   meta.method <- "REML" # Method for meta-analysis
-
+  
   # Test if we are dealing with multivariate data
   if (class(coefficients) == "numeric") {
     coefficients <- data.frame(y=coefficients)
@@ -467,7 +467,7 @@ mrma <- function(coefficients, vcov, variances,  ...) {
   
   # Study indicator
   study <- rep(NA, length(yi))
-
+  
   for (i in 1:dim(vcov)[3]) {
     study[(((i-1)*ncol(coefficients))+1):(i*ncol(coefficients))] <- rep(i,ncol(coefficients))
   }
@@ -480,7 +480,7 @@ mrma <- function(coefficients, vcov, variances,  ...) {
     ws_var[[i]] <- vcov[,,i]
   }
   S <- blockMatrixDiagonal(ws_var)
-
+  
   ma.fit <- rma.mv(yi = yi, V = S, mods = ~ -1+group, random = ~ group|study, data = rma_dat, 
                    struct= "UN", method = meta.method)
   

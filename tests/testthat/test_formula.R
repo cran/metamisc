@@ -64,6 +64,7 @@ test_that("The difference in vectors is given", {
   expect_equal(setSymDiff(ab, axb), "a:b")
   expect_equal(setSymDiff(abb2, ab), "I(b^2)")
   expect_equal(setSymDiff(abb2, axb), c("a:b", "I(b^2)"))
+  #expect_true(isTRUE(all.equal(setSymDiff(abb2, axb) ,c("a:b", "I(b^2)"))))
   expect_length(setSymDiff(ab, ab), 0L)
 })
 

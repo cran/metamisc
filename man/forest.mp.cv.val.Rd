@@ -5,8 +5,7 @@
 \alias{forest.perf}
 \title{Forest plot of a validation object.}
 \usage{
-\method{forest}{mp.cv.val}(object, perfFUN = 1, method = "REML",
-  xlab = NULL, ...)
+\method{forest}{mp.cv.val}(object, perfFUN = 1, method = "REML", xlab = NULL, ...)
 }
 \arguments{
 \item{object}{An \code{mp.cv.val} or \code{perf} object.}

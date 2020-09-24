@@ -16,11 +16,11 @@ computeRecal <- function(object, newdata, b = NULL, f = ~ 1, estFUN = NULL, f.or
     else estFUN <- as.character(class(object)[[1]])
   }
   estFUN <- match.fun(estFUN)
-
+  
   # Make offset (linear predictor)
   X <- model.matrix(if (is.null(f.orig)) formula(object) else as.formula(f.orig), data = newdata)
   lp <- X %*% b
-
+  
   # offset must be in newdata.
   osdata   <- cbind(newdata, lp)
   f <- update.formula(formula(object), formula(f))
@@ -169,12 +169,12 @@ recalibrate <- function(object, newdata, f = ~ 1, estFUN = NULL, ...) {
   if (!is.list(object$orig.coef))
     stop("object is incompatible with recalibrate.")
   f <- as.formula(f)
-
+  
   object$orig.coef[[length(object$orig.coef) + 1]] <- coef(object)
   br <- computeRecal(object = object, newdata = newdata, f = f, estFUN = estFUN, ...)
   i <- match(names(br), names(object$coefficients))
   object$coefficients[i] <- object$coefficients[i] + br
-
+  
   if (is.call(object$call))
   {
     object$original.call <- object$call

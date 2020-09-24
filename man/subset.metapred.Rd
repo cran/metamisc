@@ -4,8 +4,15 @@
 \alias{subset.metapred}
 \title{Subsetting metapred fits}
 \usage{
-\method{subset}{metapred}(x, select = "cv", step = NULL,
-  model = NULL, stratum = NULL, add = TRUE, ...)
+\method{subset}{metapred}(
+  x,
+  select = "cv",
+  step = NULL,
+  model = NULL,
+  stratum = NULL,
+  add = TRUE,
+  ...
+)
 }
 \arguments{
 \item{x}{metapred object}

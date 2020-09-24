@@ -4,11 +4,26 @@
 \alias{metapred}
 \title{Generalized Stepwise Regression for Prediction Models in Clustered Data}
 \usage{
-metapred(data, strata, formula, estFUN = "glm", scope = NULL,
-  retest = FALSE, max.steps = 1000, center = FALSE,
-  recal.int = FALSE, cvFUN = NULL, cv.k = NULL, metaFUN = NULL,
-  meta.method = NULL, predFUN = NULL, perfFUN = NULL,
-  genFUN = NULL, selFUN = "which.min", ...)
+metapred(
+  data,
+  strata,
+  formula,
+  estFUN = "glm",
+  scope = NULL,
+  retest = FALSE,
+  max.steps = 1000,
+  center = FALSE,
+  recal.int = FALSE,
+  cvFUN = NULL,
+  cv.k = NULL,
+  metaFUN = NULL,
+  meta.method = NULL,
+  predFUN = NULL,
+  perfFUN = NULL,
+  genFUN = NULL,
+  selFUN = "which.min",
+  ...
+)
 }
 \arguments{
 \item{data}{data.frame containing the data. Note that \code{metapred} removes observations with missing data \emph{listwise}

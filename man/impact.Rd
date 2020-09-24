@@ -26,7 +26,7 @@ The IMPACT dataset comprises 15 studies of patients suffering from traumatic bra
 The included studies were part of the IMPACT project, where a total of 25 prognostic factors were considered for prediction of 6-month mortality. Missing values were imputed using the study as a fixed effect in the imputation model (Steyerberg et al, 2008).
 }
 \source{
-Steyerberg EW, Nieboer D, Debray TPA, van Houwelingen HC. Assessment of heterogeneity in an individual participant data meta-analysis of prediction models: An overview and illustration. \emph{Stat Med}. 2019; In press.
+Steyerberg EW, Nieboer D, Debray TPA, Van Houwelingen JC. Assessment of heterogeneity in an individual participant data meta-analysis of prediction models: An overview and illustration. \emph{Stat Med}. 2019;38(22):4290--309. 
 }
 \references{
 Murray GD, Butcher I, McHugh GS, et al. Multivariable prognostic analysis in traumatic brain injury: results from the IMPACT study. \emph{J Neurotrauma}. 2007;24(2):329--337.

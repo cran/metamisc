@@ -5,7 +5,7 @@
 Predictive performance of the Framingham Risk Score in male populations
 }
 \description{
-This data set contains estimates on the performance of the Framingham model for predicting coronary heart disease in male populations (Wilson 1998). Results are based on the original development study and 20 validations identified by Damen \emph{et al}.
+This data set contains estimates on the performance of the Framingham model for predicting coronary heart disease in male populations (Wilson 1998). Results are based on the original development study and 20 validations identified by Damen \emph{et al} (BMC Med, 2017).
 }
 \usage{data("Framingham")}
 \format{
@@ -37,6 +37,8 @@ The Framingham Risk Score allows physicians to predict 10-year coronary heart di
 }
 \source{
 Damen JAAG, Hooft L, Schuit E, Debray TPA, Collins GS, Tzoulaki I, et al. Prediction models for cardiovascular disease risk in the general population: systematic review. \emph{BMJ}. 2016;i2416. 
+
+Damen JAAG, Pajouheshnia R, Heus P, Moons KGM, Reitsma JB, Scholten RJPM, et al. Performance of the Framingham risk models and Pooled Cohort Equations: a systematic review and meta-analysis. \emph{BMC Med}. 2017;17(1):109. 
 
 Wilson PW, D'Agostino RB, Levy D, Belanger AM, Silbershatz H, Kannel WB. Prediction of coronary heart disease using risk factor categories. \emph{Circulation}. 1998; \bold{97}(18):1837--47. 
 

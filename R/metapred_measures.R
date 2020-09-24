@@ -23,7 +23,7 @@
 # mse <- brier <- function(p, y, ...) mean((p - y)^2)
 
 # rmse <- function(p, y, ...)
-  # sqrt(mse(p = p, y = y, ...))
+# sqrt(mse(p = p, y = y, ...))
 
 # Error function: Variance of prediction error
 # var.e <- function(p, y, ...) 
@@ -52,7 +52,7 @@ var.with.se <- function(x, ...) {
   out
 }
 # Measure 1: Coefficient of variation of prediction error.
-  # abs logical absolute value
+# abs logical absolute value
 coef.var.pred <- function(p, y, abs = TRUE, ...)
   coef.var(x = p - y, abs = abs) 
 
@@ -286,7 +286,7 @@ coef.var.mean <- function(object, abs = TRUE, ...)  {
   x <- unlist(object[["estimate"]])
   coef.var(x, abs = abs) + if (abs) abs(mean(x)) else mean(x)
 }
-  
+
 
 # Measure 2 (?): GINI coefficient
 # #' @importFrom Hmisc GiniMd
@@ -364,13 +364,13 @@ mean.of.large <- function(object, ...) {
 #' @importFrom metafor rma.uni
 #' @export
 plot.listofperf <- function(x, pfn, ...) { # xlab tbi from perfFUN
-
-    xlab <- paste(pfn, "in validation strata")
-
+  
+  xlab <- paste(pfn, "in validation strata")
+  
   if (is.null(names(x))) # The # is to show users that the numbers are not their own. (no longer necessary)
     names(x) <- paste("#", seq_along(x), sep = "") 
   z <- ci.listofperf(object = x, ...)
-
+  
   # Thomas: I changed the implementation to uvmeta to ensure our prediction intervals are bsaed on Student T distribution
   # and to ensure we are using REML everywhere.
   if (inherits(x[[1]], "auc")) { # To be replaced by child function.
@@ -387,7 +387,7 @@ plot.listofperf <- function(x, pfn, ...) { # xlab tbi from perfFUN
     pi.lb <- ma$pi.lb
     pi.ub <- ma$pi.ub
   } else if (inherits(x[[1]], "mse")) {
-  #   # print("by rma.uni")
+    #   # print("by rma.uni")
     ma <- uvmeta(r = sapply(x, `[[`, "estimate"), r.vi = sapply(x, variances), method = "REML")
     est <- ma$est
     pi.lb <- ma$pi.lb
@@ -396,7 +396,7 @@ plot.listofperf <- function(x, pfn, ...) { # xlab tbi from perfFUN
   # This is the same for both methods:
   ci.lb <- ma$ci.lb
   ci.ub <- ma$ci.ub
-
+  
   # print("Make forest plot.")
   fp <- metamisc::forest(theta       = z$theta,
                          theta.ci.lb = z$theta.ci.lb,
@@ -448,13 +448,13 @@ ma.mp.cv.val <- function(object, method = "REML", ...)
 #' @export
 ma.mp.global <- function(object, method = "REML", ...)
   ma(object$stratified.fit, method = method, ...)
-  
+
 #' @export
 ma.mp.stratified.fit <- function(object, method = "REML", ...) {
   m <- mp.meta.fit(object, meta.method = method, ...)
   with(m, data.frame(coefficients, variances, se, ci.lb, ci.ub, tau2, se.tau2, pi.lb, pi.ub))
 }
-  
+
 
 #' @export
 ma.perf <- function(object, method = "REML", test = "knha", ...) {
@@ -485,7 +485,7 @@ ma.perf <- function(object, method = "REML", test = "knha", ...) {
                       pi.lb   = ma$pi.lb,
                       pi.ub   = ma$pi.ub)) 
   }
-
+  
   stop("class not recognized")
 }
 
@@ -550,11 +550,11 @@ forest.metapred <- function(object, perfFUN = 1, step = NULL, method = "REML", m
 #                 object[["perf.names"]][[statistic]], ...)
 
 forest.mp.cv.val <- function(object, perfFUN = 1, method = "REML", xlab = NULL, ...) {
-    if (is.null(xlab))
-      xlab <- if (is.character(perfFUN)) perfFUN else  object$perf.names[[perfFUN]]
+  if (is.null(xlab))
+    xlab <- if (is.character(perfFUN)) perfFUN else  object$perf.names[[perfFUN]]
   forest.perf(perf(object, perfFUN = perfFUN, ...), method = method, xlab = xlab, ...)
 }
-  
+
 
 forest.perf <- function(object, method = "REML", ...) {
   if (is.null(theta.slab <- list(...)$theta.slab))

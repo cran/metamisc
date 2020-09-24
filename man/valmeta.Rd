@@ -4,10 +4,37 @@
 \alias{valmeta}
 \title{Meta-analysis of prediction model performance}
 \usage{
-valmeta(measure = "cstat", cstat, cstat.se, cstat.cilb, cstat.ciub,
-  cstat.cilv, sd.LP, OE, OE.se, OE.cilb, OE.ciub, OE.cilv, citl, citl.se,
-  N, O, E, Po, Po.se, Pe, data, method = "REML", test = "knha",
-  ret.fit = FALSE, verbose = FALSE, slab, n.chains = 4, pars, ...)
+valmeta(
+  measure = "cstat",
+  cstat,
+  cstat.se,
+  cstat.cilb,
+  cstat.ciub,
+  cstat.cilv,
+  sd.LP,
+  OE,
+  OE.se,
+  OE.cilb,
+  OE.ciub,
+  OE.cilv,
+  citl,
+  citl.se,
+  N,
+  O,
+  E,
+  Po,
+  Po.se,
+  Pe,
+  data,
+  method = "REML",
+  test = "knha",
+  ret.fit = FALSE,
+  verbose = FALSE,
+  slab,
+  n.chains = 4,
+  pars,
+  ...
+)
 }
 \arguments{
 \item{measure}{A character string indicating which summary performance measure should be calculated. Options are
@@ -221,14 +248,13 @@ valmeta(measure="OE", Po=Po, Pe=Pe, N=n, data=Framingham)
 Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review and meta-analysis 
 of prediction model performance. \emph{BMJ}. 2017;356:i6460.
 
-Debray TPA, Damen JAAG, Riley R, Snell KIE, Reitsma JB, Hooft L, et al. A framework for meta-analysis of 
-prediction model studies with binary and time-to-event outcomes. \emph{Stat Methods Med Res}. 2018; In press. 
+Debray TPA, Damen JAAG, Riley R, Snell KIE, Reitsma JB, Hooft L, et al. A framework for meta-analysis of prediction model studies with binary and time-to-event outcomes. \emph{Stat Methods Med Res}. 2019 Sep;28(9):2768--86. 
 
 Steyerberg EW, Nieboer D, Debray TPA, van Houwelingen HC. Assessment of heterogeneity in an individual participant
 data meta-analysis of prediction models: An overview and illustration. \emph{Stat Med}. 2019; In press.
 
 Viechtbauer W. Conducting Meta-Analyses in R with the metafor Package. \emph{Journal of Statistical Software}. 
-2010; 36(3). Available from: \url{http://www.jstatsoft.org/v36/i03/}
+2010; 36(3). Available from: \url{https://www.jstatsoft.org/v36/i03/}
 }
 \seealso{
 \code{\link{ccalc}} to calculate concordance statistics and corresponding standard errors, \code{\link{oecalc}} to 

@@ -29,13 +29,13 @@
 #' @param \ldots Additional arguments.
 #' 
 #' @references 
-#' Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review and meta-analysis of prediction model performance. BMJ. 2017;356:i6460. 
+#' Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review and meta-analysis of prediction model performance. \emph{BMJ}. 2017;356:i6460. 
 #' 
-#' Debray TPA, Damen JAAG, Riley R, Snell KIE, Reitsma JB, Hooft L, et al. A framework for meta-analysis of  prediction model studies with binary and time-to-event outcomes. Stat Methods Med Res. 2018; In press. 
-#' 
+#' Debray TPA, Damen JAAG, Riley R, Snell KIE, Reitsma JB, Hooft L, et al. A framework for meta-analysis of prediction model studies with binary and time-to-event outcomes. \emph{Stat Methods Med Res}. 2019 Sep;28(9):2768--86.
+#'  
 #' Snell KI, Ensor J, Debray TP, Moons KG, Riley RD. Meta-analysis of prediction model performance across 
 #' multiple studies: Which scale helps ensure between-study normality for the C -statistic and calibration measures? 
-#' \emph{Statistical Methods in Medical Research}. 2017. 
+#' \emph{Stat Methods Med Res}. 2017. 
 #' 
 #' 
 #' @return An object of class c("mm_perf","data.frame") with the following columns:
