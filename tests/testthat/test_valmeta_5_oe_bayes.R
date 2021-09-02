@@ -25,7 +25,7 @@ test_that("Bayesian random effect meta-analysis of total O:E ratio works", {
                   O = EuroSCORE$n.events, 
                   E = EuroSCORE$e.events, 
                   N = N, 
-                  method = "BAYES", slab = EuroSCORE$Study, pars = pars, ret.fit = TRUE)
+                  method = "BAYES", slab = EuroSCORE$Study, pars = pars)
   
   expect_equal(fit2$numstudies, nrow(EuroSCORE))
   expect_equal(as.character(class(fit2$fit)), "runjags")

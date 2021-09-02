@@ -86,7 +86,7 @@ For instance, the logit transformation can be applied by specifying \code{g="log
 
 \subsection{Restoring the c-statistic}{
 For studies where the c-statistic is missing, it is estimated from the standard deviation of the linear predictor 
-(\code{theta.source="std.dev(LP)"). The corresponding method is described by White et al. (2015). }.
+(\code{theta.source="std.dev(LP)"}). The corresponding method is described by White et al. (2015).
 }
 
 \subsection{Restoring the standard error of the c-statistic}{
@@ -116,9 +116,9 @@ plot(est1)
                                                             
 }
 \references{
-Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review and meta-analysis of prediction model performance. \emph{BMJ}. 2017;356:i6460. 
+Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review and meta-analysis of prediction model performance. BMJ. 2017;356:i6460. 
 
-Debray TPA, Damen JAAG, Riley R, Snell KIE, Reitsma JB, Hooft L, et al. A framework for meta-analysis of prediction model studies with binary and time-to-event outcomes. \emph{Stat Methods Med Res}. 2019 Sep;28(9):2768--86. 
+Debray TPA, Damen JAAG, Riley R, Snell KIE, Reitsma JB, Hooft L, et al. A framework for meta-analysis of  prediction model studies with binary and time-to-event outcomes. Stat Methods Med Res. 2018; In press. 
 
 Hanley JA, McNeil BJ. The meaning and use of the area under a receiver operating characteristic (ROC) 
 curve. \emph{Radiology}. 1982; 143(1):29--36.

@@ -23,6 +23,14 @@
   refline = 0,
   label.summary = "Summary Estimate",
   label.predint = "Prediction Interval",
+  nrows.before.summary = 1,
+  study.digits = 2,
+  study.shape = 15,
+  col.diamond = "white",
+  col.predint = "black",
+  size.study = 0.5,
+  size.predint = 1,
+  lty.ref = "dotted",
   ...
 )
 }
@@ -64,6 +72,23 @@ See \link[ggplot2]{ggtheme} for more information.}
 \item{label.summary}{Optional character string specifying the label for the summary estimate}
 
 \item{label.predint}{Optional character string specifying the label for the (approximate) prediction interval}
+
+\item{nrows.before.summary}{How many empty rows should be introduced between the study results and the summary estimates}
+
+\item{study.digits}{How many significant digits should be used to print the stuy results}
+
+\item{study.shape}{Plotting symbol to use for the study results. By default, a filled square is used.}
+
+\item{col.diamond}{The filling color for the diamond representing the summary estimate. 
+E.g. "red", "blue", or hex color code ("#2e8aff")}
+
+\item{col.predint}{Line color for the prediction interval. E.g. "red", "blue", or hex color code ("#2e8aff")}
+
+\item{size.study}{Line width for the study results in mm}
+
+\item{size.predint}{Line width for the prediction interval in mm}
+
+\item{lty.ref}{Line type for the reference line}
 
 \item{\dots}{Additional arguments, which are currently ignored.}
 }

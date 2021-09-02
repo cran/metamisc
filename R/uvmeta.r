@@ -26,11 +26,14 @@
 #' @param pars Optional list with additional arguments. The width of confidence, credibility and prediction intervals is 
 #' defined by \code{level} (defaults to 0.95). 
 #' The following parameters configure the MCMC sampling procedure:  
-#' \code{hp.mu.mean} (Hyperparameter: mean of the prior distribution of the fixed/random effects model, defaults to zero), 
-#' \code{hp.mu.var} (Hyperparameter: variance of the prior distribution of the fixed/random effects model, defaults to 1000),
-#' \code{hp.tau.min} (Hyperparameter: mininum value for the between-study standard deviation, defaults to 0),
-#' \code{hp.tau.max} (Hyperparameter: maximum value for the between-study standard deviation, defaults to 100).
-#' @param ret.fit logical indicating whether the full results from the fitted model should also be returned.
+#' \code{hp.mu.mean} (mean of the prior distribution of the random effects model, defaults to 0), 
+#' \code{hp.mu.var} (variance of the prior distribution of the random effects model, defaults to 1E6), 
+#' \code{hp.tau.min} (minimum value for the between-study standard deviation, defaults to 0), 
+#' \code{hp.tau.max} (maximum value for the between-study standard deviation, defaults to 2), 
+#' \code{hp.tau.sigma} (standard deviation of the prior distribution for the between-study standard-deviation), 
+#' \code{hp.tau.dist} (prior distribution for the between-study standard-deviation. Defaults to \code{"dunif"}), 
+#' \code{hp.tau.df} (degrees of freedom for the prior distribution for the between-study standard-deviation. 
+#' Defaults to 3).
 #' @param verbose If TRUE then messages generated during the fitting process will be displayed.
 #' @param \dots Additional arguments that are passed to \pkg{rma} or \pkg{runjags} (if \code{method="BAYES"}).
 #' 
@@ -109,34 +112,21 @@
 #' @export
 
 uvmeta <- function(r, r.se, r.vi, method="REML", test="knha", labels, na.action, 
-                   n.chains=4, pars, ret.fit=FALSE, verbose=FALSE, ...) 
+                   n.chains=4, pars, verbose=FALSE, ...) 
   UseMethod("uvmeta")
 
 #' @export
 uvmeta.default <- function(r, r.se, r.vi, method="REML", test="knha", labels, na.action, 
-                           n.chains=4, pars, ret.fit=FALSE, verbose=FALSE, ...)
+                           n.chains=4, pars, verbose=FALSE, ...)
 {
   out <- list()
   out$call <- match.call()
   out$method <- method
   out$test <- test
   class(out) <- "uvmeta"
+  
+  pars.default <- .initiateDefaultPars(pars)
 
-  
-  pars.default <- list(level = 0.95,
-                       hp.mu.mean = 0, 
-                       hp.mu.var = 1000,
-                       hp.tau.min = 0,
-                       hp.tau.max = 100) 
-  
-  # Load default parameters
-  if (!missing(pars)) {
-    for (i in 1:length(pars)) {
-      element <- ls(pars)[i]
-      pars.default[[element]] <- pars[[element]]
-    }
-  }
-  
   
   # Check if we need to load runjags
   if (method=="BAYES") {
@@ -201,8 +191,7 @@ uvmeta.default <- function(r, r.se, r.vi, method="REML", test="knha", labels, na
   # Start analyses
   #############################################################################
   numstudies <- dim(ds)[1]
-  dfr <- numstudies-1
-  
+
   if(numstudies < 3) {
     warning("There are very few primary studies!")
   }
@@ -224,69 +213,25 @@ uvmeta.default <- function(r, r.se, r.vi, method="REML", test="knha", labels, na
     out$pi.lb <- ifelse(method=="FE", preds$ci.lb, predint$lower)
     out$pi.ub <- ifelse(method=="FE", preds$ci.ub, predint$upper)
 
-    out$fit <- ifelse(ret.fit, fit, NA)
+    out$fit <- fit
     out$numstudies <- fit$k
     
   } else if (method == "BAYES") { 
-    results.overview <- as.data.frame(array(NA,dim=c(2, length(quantiles)+2)))
-    colnames(results.overview) <- c("Estimate","Var",paste(quantiles*100,"%",sep=""))
-    rownames(results.overview) <- c("mu", "tausq")
-    
-    modelfile <- system.file(package="metamisc", "model", "uvmeta_ranef.bug")
-    uvmeta_dat <- list('r' = ds$theta,
-                       'vars' = ds$theta.se**2,
-                       'k' = numstudies,
-                       'hp.mu.mean' = pars.default$hp.mu.mean,
-                       'hp.mu.prec' = 1/pars.default$hp.mu.var,
-                       'hp.tau.min' = pars.default$hp.tau.min,
-                       'hp.tau.max' = pars.default$hp.tau.max)
-    
-    model.pars <- list()
-    model.pars[[1]] <- list(param="mu", param.f=rnorm, param.args=list(n=1, mean=pars.default$hp.mu.mean, sd=sqrt(pars.default$hp.mu.var)))
-    model.pars[[2]] <- list(param="tau", param.f=runif, param.args=list(n=1, min=pars.default$hp.tau.min, max=pars.default$hp.tau.max))
-    inits <- generateMCMCinits(n.chains=n.chains, model.pars=model.pars)
-    
-    jags.model <- runjags::run.jags(model=modelfile, 
-                                    monitor = c("mu", "tausq", "theta.new", "PED"), 
-                                    data = uvmeta_dat, 
-                                    silent.jags = !verbose,
-                                    inits=inits,
-                                    confidence=out$level,
-                                    ...)
-    # Check if model converged
-    psrf.ul <-  jags.model$psrf$psrf[,"Upper C.I."]
-    psrf.target <- jags.model$psrf$psrf.target
-    
-    if(sum(psrf.ul > psrf.target)>1) {
-      warning(paste("Model did not properly converge! The upper bound of the convergence diagnostic (psrf) exceeds", 
-                    psrf.target, "for the parameters", 
-                    paste(rownames(jags.model$psrf$psrf)[which(psrf.ul > psrf.target)], " (psrf=", 
-                          round(jags.model$psrf$psrf[which(psrf.ul > psrf.target),2],2), ")", collapse=", ", sep=""),
-                    ". Consider re-running the analysis by increasing the optional arguments 'adapt', 'burnin' and/or 'sample'.", sep=""))
-    }
-    
-    fit <- jags.model$summaries
-    
-    #Extract PED
-    fit.dev <- runjags::extract(jags.model,"PED")
-    
-    txtLevel <- (out$level*100)
-    
-    out$est <- fit["mu", "Median"]
-    out$se  <- fit["mu", "SD"]
-    out$tau2 <- fit["tausq", "Median"]
-    out$se.tau2 <- fit["tausq", "SD"]
-    out$ci.lb <- fit["mu", paste("Lower", txtLevel, sep="")]
-    out$ci.ub <- fit["mu", paste("Upper", txtLevel, sep="")]
-    out$pi.lb <- fit["theta.new",  paste("Lower", txtLevel, sep="")]
-    out$pi.ub <- fit["theta.new",  paste("Upper", txtLevel, sep="")]
-    out$fit <- out$fit <- ifelse(ret.fit, jags.model, NA)
-    out$PED <- sum(fit.dev$deviance)+sum(fit.dev$penalty)
+    bayesma <- run_Bayesian_REMA(list('r' = ds$theta,
+                                      'vars' = ds$theta.se**2,
+                                      'k' = numstudies), 
+                             pars = pars.default, 
+                             FUN_generate_bugs = .generateBugsREMA,
+                             n.chains = n.chains, 
+                             verbose = verbose, ...) 
+    out <- c(out, bayesma)
   }
   #attr(out$results,"level") <- pars.default$level
   out$data <- ds
   out$numstudies <- dim(ds)[1]
   out$na.action <- na.action
+  class(out) <- "uvmeta"
+  
   return(out)
 }
 
@@ -339,15 +284,16 @@ plot.uvmeta <- function(x, sort="asc", ...) {
   yi <- c(x$data[,"theta"])
   yi.slab <- c(as.character(x$slab))
   
-  forest(theta=yi, 
-         theta.ci.lb=yi.ci[,1], theta.ci.ub=yi.ci[,2],
-         theta.slab=yi.slab, 
-         theta.summary=x$est, 
-         theta.summary.ci.lb=x$ci.lb,
-         theta.summary.ci.ub=x$ci.ub,
-         theta.summary.pi.lb=x$pi.lb,
-         theta.summary.pi.ub=x$pi.ub,
-         sort=sort, ...)
+  forest(theta = yi, 
+         theta.ci.lb = yi.ci[,1], 
+         theta.ci.ub = yi.ci[,2],
+         theta.slab = yi.slab, 
+         theta.summary = x$est, 
+         theta.summary.ci.lb = x$ci.lb,
+         theta.summary.ci.ub = x$ci.ub,
+         theta.summary.pi.lb = x$pi.lb,
+         theta.summary.pi.ub = x$pi.ub,
+         sort = sort, ...)
 }
 
 
@@ -401,6 +347,79 @@ summary.uvmeta <- function(object, ...)
         cat(paste("\nTau squared: \t\t",round(object$tau2,5))," (SE: ",round(object$se.tau2,5), ")",sep="")
     }
 }
+
+#' Plot the prior and posterior distribution of a meta-analysis model
+#' 
+#' Function to generate plots for the prior and posterior distribution of a Bayesian meta-analysis.
+#' 
+#' @param x An object of class \code{"uvmeta"}
+#' @param par Character string to specify for which parameter a plot should be generated. Options are \code{"mu"} 
+#' (mean of the random effects model) and \code{"tau"} (standard deviation of the random effects model).
+#' @param distr_type Character string to specify whether the prior distribution (\code{"prior"}) or 
+#' posterior distribution (\code{"posterior"}) should be displayed.
+#' @param plot_type Character string to specify whether a density plot (\code{"dens"}) or 
+#' histogram (\code{"hist"}) should be displayed.
+#' @param \ldots Additional arguments which are currently not used
+#' 
+#' @examples 
+#' \dontrun{
+#' data(Roberts)
+#' 
+#' fit <- with(Roberts, uvmeta(r=SDM, r.se=SE, method="BAYES"))
+#' 
+#' dplot(fit)
+#' dplot(fit, distr_type = "posterior")
+#' dplot(fit, par = "tau", distr_type = "prior")
+#' dplot(fit, plot_type = "hist")
+#' } 
+#' 
+#' @keywords meta-analysis density distribution
+#'             
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' 
+#' @return An object of class \code{ggplot}
+#' 
+#' @export
+dplot.uvmeta <- function(x, par, distr_type, plot_type = "dens", ...) {
+  if (!("runjags" %in% class(x$fit))) {
+    stop("The object 'x' does not represent a Bayesian analysis!")
+  }
+  
+  if (missing(par) & missing(distr_type)) {
+    P <- data.frame(
+      Parameter = c("prior_mu", "mu.tobs", "prior_bsTau", "bsTau"),
+      Label = c("a) Prior distribution of the meta-analysis mean", 
+                "b) Posterior distribution of the meta-analysis mean", 
+                "c) Prior distribution of the between-study standard deviation",
+                "d) Posterior distribution of the between-study standard deviation"))
+  } else if (missing(par) & distr_type == "posterior") {
+    P <- data.frame(
+      Parameter = c("mu.tobs", "bsTau"),
+      Label = c("Posterior distribution of the meta-analysis mean", "Posterior distribution of the between-study standard deviation"))
+  } else if (missing(par) & distr_type == "prior") {
+    P <- data.frame(
+      Parameter = c("prior_mu", "prior_bsTau"),
+      Label = c("Prior distribution of the meta-analysis mean", "Prior distribution of the between-study standard deviation"))
+  } else if (par == "mu" & distr_type == "posterior") {
+    P <- data.frame(
+      Parameter = c("mu.tobs"),
+      Label = c("Posterior distribution of the meta-analysis mean"))
+  } else if (par == "mu" & distr_type == "prior") {
+    P <- data.frame(
+      Parameter = c("prior_mu"),
+      Label = c("Prior distribution of the meta-analysis mean"))
+  } else if (par == "tau") {
+    P <- data.frame(
+      Parameter = ifelse(distr_type == "posterior", "bsTau", "prior_bsTau"),
+      Label = paste(ifelse(distr_type == "posterior", "Posterior", "Prior"), "distribution of the between-study standard deviation"))
+  } else {
+    stop("Invalid combination of 'par' and 'distr_type'")
+  }
+    
+  dplot(x$fit$mcmc, P = P, plot_type = plot_type, ...)
+}
+
+
 
 
 

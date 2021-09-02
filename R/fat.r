@@ -137,8 +137,9 @@ fat <- function(b, b.se, n.total, d.total, d1, d2, method="E-FIV")
       stop("Incompatible vector sizes for 'b' and 'b.se'!")
     }
     studies.complete <- c(!is.na(b) & !is.na(b.se))
-    ds <- as.data.frame(cbind(b, b.se))
-    colnames(ds) <- c("y","x")
+    ds <- data.frame("y" = b, 
+                     "x" = b.se
+                     )
   } else if (method== "E-FIV") {
     if (missing(b.se)) {
       stop ("No values given for 'b.se'")
@@ -147,8 +148,10 @@ fat <- function(b, b.se, n.total, d.total, d1, d2, method="E-FIV")
       stop("Incompatible vector sizes for 'b' and 'b.se'!")
     }
     studies.complete <- c(!is.na(b) & !is.na(b.se))
-    ds <- as.data.frame(cbind(b, b.se, (1/(b.se**2))))
-    colnames(ds) <- c("y","x","w")
+    ds <- data.frame("y" = b, 
+                     "x" = b.se, 
+                     "w" = (1/(b.se**2))
+                     )
   } else if (method == "M-FIV") {
     if (missing(b.se)) {
       stop ("No values given for 'b.se'")
@@ -163,8 +166,10 @@ fat <- function(b, b.se, n.total, d.total, d1, d2, method="E-FIV")
       stop("Incompatible vector sizes for 'b' and 'n.total'!")
     }
     studies.complete <- c(!is.na(b) & !is.na(b.se) & !is.na(n.total))
-    ds <- as.data.frame(cbind(b, n.total, (1/(b.se**2))))
-    colnames(ds) <- c("y","x","w")
+    ds <- data.frame("y" = b, 
+                     "x" = n.total, 
+                     "w" = (1/(b.se**2))
+                     )
   } else if (method=="M-FPV") {
     if (missing(n.total)) {
       stop ("No values given for 'n.total'")
@@ -207,8 +212,10 @@ fat <- function(b, b.se, n.total, d.total, d1, d2, method="E-FIV")
     d.total.cc[d.total==0] <- 1 #0.5 event in exposed group and 0.5 event in non-exposed group
     n.total[d.total==0] <- n.total[d.total==0]+2 #2*0.5 in the events, and 2*0.5 in the non-events
     
-    ds <- as.data.frame(cbind(b, 1/n.total, (d.total.cc*(1-d.total.cc/n.total))))
-    colnames(ds) <- c("y","x","w")
+    ds <- data.frame("y" = b, 
+                     "x" = 1/n.total, 
+                     "w" = (d.total.cc*(1-d.total.cc/n.total))
+                     )
   } else if (method=="D-FIV") {
     if (missing(b.se)) {
       stop ("No values given for 'b.se'")
@@ -228,8 +235,10 @@ fat <- function(b, b.se, n.total, d.total, d1, d2, method="E-FIV")
     d.total.cc <- d.total
     d.total.cc[d.total==0] <- 1 #0.5 event in exposed group and 0.5 event in non-exposed group
 
-    ds <- as.data.frame(cbind(b, 1/d.total.cc, (1/(b.se**2))))
-    colnames(ds) <- c("y","x","w")
+    ds <- data.frame("y" = b, 
+                     "x" = 1/d.total.cc, 
+                     "w" = (1/(b.se**2))
+                     )
   } else if (method=="D-FAV") {
     if (missing(d1)) {
       stop ("No values given for 'd1'")
@@ -255,8 +264,10 @@ fat <- function(b, b.se, n.total, d.total, d1, d2, method="E-FIV")
     d1.cc[(d1==0 | d2==0)] <- d1.cc[(d1==0 | d2==0)]+0.5 #0.5 event in exposed group and 0.5 event in non-exposed group
     d2.cc[(d1==0 | d2==0)] <- d2.cc[(d1==0 | d2==0)]+0.5
     
-    ds <- as.data.frame(cbind(b, 1/(d1.cc+d2.cc),  1/((1/d1.cc)+(1/d2.cc))))
-    colnames(ds) <- c("y","x","w")
+    ds <- data.frame("y" = b, 
+                     "x" = 1/(d1.cc+d2.cc),  
+                     "w" = 1/((1/d1.cc)+(1/d2.cc))
+                     )
   } 
   else {
     stop("Method for testing funnel plot asymmetry not supported")
@@ -265,7 +276,7 @@ fat <- function(b, b.se, n.total, d.total, d1, d2, method="E-FIV")
   # Identify which studies can be used
   nstudies <- sum(studies.complete)
   
-  # Omit sudies with missing information
+  # Omit sudies with missing information  
   ds <- ds[studies.complete,]
   
   if (nstudies < length(studies.complete)) {
@@ -275,7 +286,7 @@ fat <- function(b, b.se, n.total, d.total, d1, d2, method="E-FIV")
   # Get the fixed effect summary estimate
   res <- NULL
   if (!missing(b.se)) {
-    res <- rma(yi=b[studies.complete], sei=b.se[studies.complete], method="FE")
+    res <- rma(yi = b[studies.complete], sei = b.se[studies.complete], method = "FE")
   }
   
 
@@ -332,13 +343,15 @@ print.fat <- function(x, digits = max(3, getOption("digits") - 3), ...) {
 #' @param confint A logical indicator. If \code{TRUE}, a confidence interval will be displayed for the estimated
 #' regression model (based on a Student-T distribution)
 #' @param confint.level Significance level for constructing the confidence interval.
+#' @param confint.alpha A numeric value between 0 and 1 indicating the opacity for the confidence region.
 #' @param confint.col The color for filling the confidence interval. Choose \code{NA} to leave polygons unfilled. 
 #' If \code{confint.density} is specified with a positive value this gives the color of the shading lines. 
 #' @param confint.density The density of shading lines, in lines per inch. The default value of \code{NULL} means 
 #' that no shading lines are drawn. A zero value of density means no shading nor filling whereas negative values 
 #' and \code{NA} suppress shading (and so allow color filling).
 #' @param xlab A title for the x axis
-#' @param ... Additional arguments for \code{\link{plot}}. 
+#' @param add.pval Logical to indicate whether a P-value should be added to the plot
+#' @param ... Additional arguments. 
 #' 
 #' @examples 
 #' data(Fibrinogen)
@@ -347,88 +360,144 @@ print.fat <- function(x, digits = max(3, getOption("digits") - 3), ...) {
 #' n.total <- Fibrinogen$N.total
 #' 
 #' # A very simple funnel plot
-#' plot(fat(b=b, b.se=b.se))
+#' plot(fat(b=b, b.se=b.se), xlab = "Log hazard ratio")
 #' 
-#' # Add custom tickmarks for the X-axis
-#' plot(fat(b=b, b.se=b.se, n.total=n.total, method="M-FIV"), xlab="Hazard ratio", xaxt="n")
-#' axis(1, at=c(log(0.5), log(1), log(1.5), log(2), log(3)), labels=c(0.5, 1, 1.5, 2,3))
+#' # Plot the funnel for an alternative test
+#' plot(fat(b=b, b.se=b.se, n.total=n.total, method="M-FIV"), xlab = "Log hazard ratio")
 #' 
+#' @import ggplot2
 #' @importFrom stats qt
 #' @importFrom graphics plot axis polygon points lines box abline
 #' 
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' @author Frantisek Bartos <f.bartos96@gmail.com>
 #' @method plot fat
+#' 
 #' @export
-plot.fat <- function(x, ref, confint=TRUE, confint.level=0.10, confint.col="skyblue", confint.density=NULL,
-                     xlab="Effect size", ...) {
-  if (!inherits(x, "fat")) 
+plot.fat <- function(x, ref, confint = TRUE, confint.level = 0.10, confint.col = "skyblue", confint.alpha = .50,
+                     confint.density = NULL,
+                     xlab = "Effect size", add.pval = TRUE, ...) {
+  if (!inherits(x, "fat"))
     stop("Argument 'x' must be an object of class \"fat\".")
-  
   if (confint.level < 0 | confint.level > 1) {
     stop("Argument 'confint.level' must be between 0 and 1.")
   }
+  if (confint.alpha < 0 | confint.alpha > 1) {
+    stop("Argument 'confint.alpha' must be between 0 and 1.")
+  }
   
-  xval <-  x$model$data[,"y"]
+  y <- NULL
   
+  xval <- x$model$data[, "y"]
   if (x$method %in% c("E-UW", "E-FIV")) {
     ylab <- "Standard error"
-    yval <- (x$model$data[,"x"])
-    ylim <- rev(c(0, max(yval, na.rm=T))) #Reverse y axis scale
-    plot(NULL, xlim=c(min(c(0,xval)), max(xval)), ylim=ylim, ylab=ylab, xlab=xlab, ...)
+    yval <- (x$model$data[, "x"])
+    ylim <- rev(c(0, max(yval, na.rm = T)))
+    xlim <- c(min(c(0, xval)), max(xval))
   } else if (x$method %in% c("M-FIV")) {
     ylab <- "Sample size"
-    yval <- (x$model$data[,"x"]) # Sample size
-    ylim <- (c(0, max(yval, na.rm=T))) 
-    plot(NULL, xlim=c(min(c(0,xval)), max(xval)), ylim=ylim, ylab=ylab, xlab=xlab, ...)
+    yval <- (x$model$data[, "x"])
+    ylim <- (c(0, max(yval, na.rm = T)))
+    xlim <- c(min(c(0, xval)), max(xval))
   } else if (x$method == "P-FPV") {
     ylab <- "Sample size"
-    yval <- (x$model$data[,"x"]) # 1/Sample size
-    ylim <- rev(c(0, max(yval, na.rm=T))) #Reverse y axis scale
-    plot(NULL, xlim=c(min(c(0,xval)), max(xval)), ylim=ylim, ylab=ylab, xlab=xlab, yaxt="n", ...)
-    step <- ((max(yval)-min(yval))/5)
-    yax <- c(round_any(1/min(yval),10**(sapply(round(1/min(yval)), nchar)-1)), round_any(1/seq(step, 4*step, by=step),10), round_any(1/max(yval),10))
-    axis(2, at=1/yax, labels=yax)
+    yval <- (x$model$data[, "x"])
+    ylim <- rev(c(0, max(yval, na.rm = T)))
+    xlim <- c(min(c(0, xval)), max(xval))
+    step <- ((max(yval) - min(yval))/5)
+    yax  <- c(plyr::round_any(1/min(yval), 10^(sapply(round(1/min(yval)), nchar) - 1)),
+              plyr::round_any(1/seq(step, 4 * step, by = step), 10), plyr::round_any(1/max(yval), 10))
   } else if (x$method == "D-FIV") {
     ylab <- "Total events"
-    yval <- (x$model$data[,"x"]) # 1/Total events
-    ylim <- rev(c(0, max(yval, na.rm=T))) #Reverse y axis scale
-    plot(NULL, xlim=c(min(c(0,xval)), max(xval)), ylim=ylim, ylab=ylab, xlab=xlab, yaxt="n", ...)
-    step <- ((max(yval)-min(yval))/4)
-    yax <- c(round_any(1/min(yval),10**(sapply(round(1/min(yval)), nchar)-1)), round_any(1/seq(step, 4*step, by=step),10), round_any(1/max(yval),10))
-    axis(2, at=1/yax, labels=yax)
+    yval <- (x$model$data[, "x"])
+    ylim <- rev(c(0, max(yval, na.rm = T)))
+    xlim <- c(min(c(0, xval)), max(xval))
+    step <- ((max(yval) - min(yval))/4)
+    yax  <- c(plyr::round_any(1/min(yval), 10^(sapply(round(1/min(yval)), nchar) - 1)),
+              plyr::round_any(1/seq(step, 4 * step, by = step), 10), plyr::round_any(1/max(yval), 10))
   } else if (x$method == "D-FAV") {
     ylab <- "Total events"
-    yval <- (x$model$data[,"x"]) # 1/Total events
-    ylim <- rev(c(0, max(yval, na.rm=T))) #Reverse y axis scale
-    
-    plot(NULL, xlim=c(min(c(0,xval)), max(xval)), ylim=ylim, ylab=ylab, xlab=xlab, yaxt="n", ...)
-    step <- ((max(yval)-min(yval))/4)
-    yax <- c(round_any(1/min(yval),10**(sapply(round(1/min(yval)), nchar)-1)), round_any(1/seq(step, 4*step, by=step),10), round_any(1/max(yval),10))
-    axis(2, at=1/yax, labels=yax)
+    yval <- (x$model$data[, "x"])
+    ylim <- rev(c(0, max(yval, na.rm = T)))
+    xlim <- c(min(c(0, xval)), max(xval))
+    step <- ((max(yval) - min(yval))/4)
+    yax  <- c(plyr::round_any(1/min(yval),10^(sapply(round(1/min(yval)), nchar) - 1)),
+              plyr::round_any(1/seq(step, 4 * step, by = step), 10), plyr::round_any(1/max(yval), 10))
   } else {
     stop("Plot not supported!")
   }
   
-
-  newdata <- sort(c(-max(x$model$data[,"x"]), x$model$data[,"x"], 2*max(x$model$data[,"x"])))
-  newdata <- as.data.frame(cbind(newdata,NA))
-  colnames(newdata) <- c("x","y")
-  predy <- predict(x$model, newdata=newdata, se.fit=T)#
+  newdata <- sort(c(-max(x$model$data[, "x"]), x$model$data[,"x"], 2 * max(x$model$data[, "x"])))
+  newdata <- as.data.frame(cbind(seq(min(newdata), max(newdata), length.out = 500), NA))
+  colnames(newdata) <- c("x", "y")
+  predy <- predict(x$model, newdata = newdata, se.fit = T)
   predy.mean <- predy$fit
-  predy.lowerInt <- as.vector(predy$fit + qt(confint.level/2, df=x$df)*predy$se.fit) #90% confidence band
-  predy.upperInt <- as.vector(predy$fit + qt((1-confint.level/2), df=x$df)*predy$se.fit) #90% confidence band
+  predy.lowerInt <- as.vector(predy$fit + qt(confint.level/2,  df = x$df) * predy$se.fit)
+  predy.upperInt <- as.vector(predy$fit + qt((1 - confint.level/2),  df = x$df) * predy$se.fit)
+  
+  # restricting plotting range to the selection
+  predy.upperInt[predy.upperInt < min(pretty(range(xlim)))] <- min(pretty(range(xlim)))
+  predy.upperInt[predy.upperInt > max(pretty(range(xlim)))] <- max(pretty(range(xlim)))
+  predy.lowerInt[predy.lowerInt < min(pretty(range(xlim)))] <- min(pretty(range(xlim)))
+  predy.lowerInt[predy.lowerInt > max(pretty(range(xlim)))] <- max(pretty(range(xlim)))
+  newdata[, "x"][newdata[, "x"] < min(pretty(range(ylim)))] <- min(pretty(range(ylim)))
+  newdata[, "x"][newdata[, "x"] > max(pretty(range(ylim)))] <- max(pretty(range(ylim)))
+  
+  p <- ggplot2::ggplot(data = data.frame(x = xval, y = yval))
   
   if (confint) {
-    polygon(x=c(predy.upperInt,rev(predy.lowerInt)), y=c(newdata[,"x"],rev(newdata[,"x"])), col=confint.col, 
-            density=confint.density)  
+    
+    
+    p <- p + ggplot2::geom_polygon(
+      mapping = ggplot2::aes(
+        x = x,
+        y = y
+      ),
+      data = data.frame(
+        x = c(
+          predy.upperInt,
+          rev(predy.lowerInt)),
+        y = c(
+          newdata[, "x"],
+          rev(newdata[, "x"]))
+      ),
+      fill  = confint.col,
+      alpha = confint.alpha
+    )
   }
-  points(xval, yval, pch=19)
-  lines(x=predy.mean, y=(newdata[,"x"]), lty=2 )
   
-  box()
+  p <- p +
+    ggplot2::geom_point(
+      mapping = ggplot2::aes(x = x, y = y),
+      shape   = 19
+    ) +
+    ggplot2::geom_line(
+      mapping = ggplot2::aes(x = x, y = y),
+      data    = data.frame(
+        x = predy.mean[newdata[, "x"] > min(pretty(range(ylim))) & newdata[, "x"] < max(pretty(range(ylim)))],     # another plotting range restriction
+        y = newdata[, "x"][newdata[, "x"] > min(pretty(range(ylim))) & newdata[, "x"] < max(pretty(range(ylim)))]  # another plotting range restriction  
+      ),
+      linetype = 2)
+  
+  
   
   if (missing(ref)) {
-    abline(v=(x$fema$b))
+    p <- p + ggplot2::geom_vline(xintercept = x$fema$b)
   } else {
-    abline(v=ref)
+    p <- p + ggplot2::geom_vline(xintercept = ref)
   }
+  
+  p <- p + ggplot2::scale_x_continuous(
+    name   = xlab,
+    limits = range(pretty(range(xlim))),
+    breaks = pretty(range(xlim)))
+  if (x$method %in% c("P-FPV", "D-FAV", "D-FIV")){
+    p <- p + ggplot2::scale_y_reverse(name = ylab, breaks = 1/yax, labels = yax, limits = rev(range(pretty(ylim))))
+  } else if (x$method %in% c("E-UW", "E-FIV")){
+    p <- p + ggplot2::scale_y_reverse(name = ylab, limits = rev(range(pretty(ylim))), breaks = pretty(range(ylim)))
+  } else {
+    p <- p + ggplot2::scale_y_continuous(name = ylab, limits = range(pretty(ylim)), breaks = pretty(range(ylim)))
+  }
+  
+  return(p)
 }

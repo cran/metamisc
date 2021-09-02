@@ -28,7 +28,6 @@ valmeta(
   data,
   method = "REML",
   test = "knha",
-  ret.fit = FALSE,
   verbose = FALSE,
   slab,
   n.chains = 4,
@@ -96,8 +95,6 @@ equal to one of the following: \code{"REML"} (Default), \code{"DL"}, \code{"HE"}
 should be computed. By default (\code{test="knha"}), the method by Knapp and Hartung (2003) is used for 
 adjusting test statistics and confidence intervals. Type '\code{?rma}' for more details.}
 
-\item{ret.fit}{logical indicating whether the full results from the fitted model should also be returned.}
-
 \item{verbose}{If TRUE then messages generated during the fitting process will be displayed.}
 
 \item{slab}{Optional vector specifying the label for each study}
@@ -108,7 +105,7 @@ cause the simulation to run more slowly. The default number of chains is 4.}
 
 \item{pars}{A list with additional arguments.  See 'Details' for more information. The following parameters configure the MCMC sampling procedure:
 \code{hp.mu.mean} (mean of the prior distribution of the random effects model, defaults to 0), 
-\code{hp.mu.var} (variance of the prior distribution of the random effects model, defaults to 1E6), 
+\code{hp.mu.var} (variance of the prior distribution of the random effects model, defaults to 1000), 
 \code{hp.tau.min} (minimum value for the between-study standard deviation, defaults to 0), 
 \code{hp.tau.max} (maximum value for the between-study standard deviation, defaults to 2), 
 \code{hp.tau.sigma} (standard deviation of the prior distribution for the between-study standard-deviation), 
@@ -132,7 +129,7 @@ An object of class \code{valmeta} with the following elements:
  \item{"ci.ub"}{upper bound of the confidence (or credibility) interval of the summary performance estimate.}
  \item{"pi.lb"}{lower bound of the (approximate) prediction interval of the summary performance estimate.}
  \item{"pi.ub"}{upper bound of the (approximate) prediction interval of the summary performance estimate.}
- \item{"fit"}{the full results from the fitted model. Only defined if \code{ret.fit = TRUE}.}
+ \item{"fit"}{the full results from the fitted model. }
  \item{"slab"}{vector specifying the label of each study.}
 }
 }
@@ -179,7 +176,7 @@ Credibility and prediction intervals are directly obtained from the correspondin
 
 The prior distribution for the (transformed) summary estimate is always modeled using a Normal distribution, 
 with mean \code{hp.mu.mean} (defaults to 0) and variance 
-\code{hp.mu.var} (defaults to 1E6). For meta-analysis of the total O:E ratio, the maximum value for \code{hp.mu.var} is 100.
+\code{hp.mu.var} (defaults to 1000). For meta-analysis of the total O:E ratio, the maximum value for \code{hp.mu.var} is 100.
 
 By default, the prior distribution for the between-study standard deviation is modeled using a uniform distribution 
 (\code{hp.tau.dist="dunif"}), with boundaries \code{hp.tau.min} and \code{hp.tau.max}. Alternatively, it is possible
@@ -217,7 +214,7 @@ valmeta(measure="OE", O=n.events, E=e.events, data=EuroSCORE, method="ML",
 
 # Bayesian random effects meta-analysis of the c-statistic
 fit2 <- valmeta(cstat=c.index, cstat.se=se.c.index, cstat.cilb=c.index.95CIl,
-                cstat.ciub=c.index.95CIu, cstat.cilb=0.95, N=n, O=n.events, 
+                cstat.ciub=c.index.95CIu, cstat.cilv=0.95, N=n, O=n.events, 
                 data=EuroSCORE, method="BAYES", slab=Study)
 
 # Bayesian one-stage random effects meta-analysis of the total O:E ratio
@@ -231,7 +228,7 @@ pars <- list(hp.tau.dist="dhalft",   # Prior for the between-study standard devi
              hp.tau.df=3,            # Degrees of freedom for 'hp.tau.dist'
              hp.tau.max=10)          # Maximum value for the between-study standard deviation
 fit3 <- valmeta(measure="OE", O=n.events, E=e.events, N=n, data=EuroSCORE.new,
-        method="BAYES", slab=Study, pars=pars, ret.fit = T)
+        method="BAYES", slab=Study, pars=pars)
 plot(fit3)
 print(fit3$fit$model) # Inspect the JAGS model
 print(fit3$fit$data)  # Inspect the JAGS data
@@ -248,7 +245,11 @@ valmeta(measure="OE", Po=Po, Pe=Pe, N=n, data=Framingham)
 Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review and meta-analysis 
 of prediction model performance. \emph{BMJ}. 2017;356:i6460.
 
-Debray TPA, Damen JAAG, Riley R, Snell KIE, Reitsma JB, Hooft L, et al. A framework for meta-analysis of prediction model studies with binary and time-to-event outcomes. \emph{Stat Methods Med Res}. 2019 Sep;28(9):2768--86. 
+Debray TPA, Damen JAAG, Riley R, Snell KIE, Reitsma JB, Hooft L, et al. A framework for meta-analysis of prediction model 
+studies with binary and time-to-event outcomes. \emph{Stat Methods Med Res}. 2019 Sep;28(9):2768--86. 
+
+Riley RD, Tierney JF, Stewart LA. Individual participant data meta-analysis: a handbook for healthcare research. Hoboken, NJ: Wiley; 2021. 
+ISBN: 978-1-119-33372-2.
 
 Steyerberg EW, Nieboer D, Debray TPA, van Houwelingen HC. Assessment of heterogeneity in an individual participant
 data meta-analysis of prediction models: An overview and illustration. \emph{Stat Med}. 2019; In press.

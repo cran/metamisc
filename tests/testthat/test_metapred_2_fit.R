@@ -38,61 +38,61 @@ test_that("Stratified models can be estimated and MA.", {
   expect_identical(coef(recal.meta.fit)[-1], coef(meta.fit)[-1])
 })
 
-# test_that("Stratified models can be cross-validated", {
-#   # CV: development
-#   expect_is(cv.dev <- metamisc:::mp.cv.dev(formula = f, data = td, st.i = st.i, st.u = st.u, folds = folds, 
-#                                            estFUN = glm, metaFUN = metamisc:::urma, meta.method = "DL", family = binomial)
-#             , "mp.cv.dev")
-#   expect_equal(family(cv.dev), binomial())
-#   expect_equal(getPredictMethod(fit = cv.dev, two.stage = TRUE), metamisc:::predictGLM)
-#   
-#   # CV: recalibration
-#   # Note: double recalibration sadly removes the previous original coefs and should not be done.
-#   expect_is(cv.recal  <- metamisc:::mp.cv.recal(cv.dev = cv.dev, newdata = td, folds = folds, estFUN = glm), "mp.cv.dev")
-#   expect_is(cv.recal2 <- metamisc:::mp.cv.recal(cv.recal, td, folds, glm), "mp.cv.dev")
-#   
-#   # CV: validation
-#   expect_is(cv.val <- metamisc:::mp.cv.val(cv.dev = cv.dev, data = td, st.i = st.i, folds = folds), "mp.cv.dev")
-#   expect_is(cv.val, "mp.cv.val")
-#   
-#   # CV: validation with recalibration
-#   # Note: with recalibration, gen and perf should always appear to be smaller (=better)
-#   expect_is(cv.val.recal <- mp.cv.val(cv.dev = cv.dev, data = td, st.i = st.i, folds = folds, 
-#                                       recal.int = TRUE, estFUN = glm), "mp.cv.dev")
-#   expect_gt(cv.val$gen, cv.val.recal$gen)
-#   expect_true(all(cv.val$perf$perf > cv.val.recal$perf$perf))
-#   
-#   # Whole sequence
-#   expect_is(cv <- mp.cv(formula = f, data = td, st.i = st.i, st.u = st.u, folds = folds, family = binomial), "mp.cv")
-#   expect_true(all(class(cv) == c("mp.cv", "mp.cv.val", "mp.cv.dev")))
-#   
-#   # Global model
-#   expect_is(global <- mp.global.2st(cv.val, urma), "mp.global")
-#   expect_is(global <- mp.global.2st(cv, urma), "mp.global")
-#   expect_is(global <- mp.global.2st(cv.val.recal, urma), "mp.global")
-# })
-# 
-# test_that("A stepwise stratified model can be fitted", {
-#   # No stepwise
-#   expect_is(step0 <- metamisc:::mp.step(formula = f, data = td, remaining.changes = c(""), st.i = st.i, 
-#                                         st.u = st.u, folds = folds, family = binomial), "mp.step")
-#   expect_length(step0$cv, 1)
-#   expect_is(mp.step.get.best(step0), "mp.cv")
-#   
-#   # Main effects
-#   change.main <- c("X2", "X3")
-#   expect_is(step <- metamisc:::mp.step(formula = f, data = td, remaining.changes = change.main, st.i = st.i, 
-#                                        st.u = st.u, folds = folds, family = binomial), "mp.step")
-#   expect_is(mp.step.get.best(step), "mp.cv")
-#   
-#   # Interaction effect
-#   change.interaction <- c("X2:X3")
-#   expect_is(step2 <- mp.step(formula = f, data = td, remaining.changes = change.interaction, st.i = st.i, 
-#                              st.u = st.u, folds = folds, family = binomial), "mp.step")
-#   expect_is(mp.step.get.best(step2), "mp.cv")
-#   
-#   # Entire fit
-#   expect_is(fit <- mp.fit(formula = f, data = td, remaining.changes = change.main, st.i = st.i, 
-#                           st.u = st.u, folds = folds, family = binomial, max.steps = 3), "mp.fit")
-#   expect_equal(fit$best.step, "s1") # for this data and seed
-# })
+test_that("Stratified models can be cross-validated", {
+  # CV: development
+  expect_is(cv.dev <- metamisc:::mp.cv.dev(formula = f, data = td, st.i = st.i, st.u = st.u, folds = folds,
+                                           estFUN = glm, metaFUN = metamisc:::urma, meta.method = "FE", family = binomial)
+            , "mp.cv.dev")
+  expect_equal(family(cv.dev), binomial())
+  expect_equal(getPredictMethod(fit = cv.dev, two.stage = TRUE), metamisc:::predictGLM)
+  
+  # CV: recalibration
+  # Note: double recalibration sadly removes the previous original coefs and should not be done.
+  expect_is(cv.recal  <- metamisc:::mp.cv.recal(cv.dev = cv.dev, newdata = td, folds = folds, estFUN = glm), "mp.cv.dev")
+  expect_is(cv.recal2 <- metamisc:::mp.cv.recal(cv.recal, td, folds, glm), "mp.cv.dev")
+  
+  # CV: validation
+  expect_is(cv.val <- metamisc:::mp.cv.val(cv.dev = cv.dev, data = td, st.i = st.i, folds = folds), "mp.cv.dev")
+  expect_is(cv.val, "mp.cv.val")
+  
+  # CV: validation with recalibration
+  # Note: with recalibration, gen and perf should always appear to be smaller (=better)
+  expect_is(cv.val.recal <- mp.cv.val(cv.dev = cv.dev, data = td, st.i = st.i, folds = folds,
+                                      recal.int = TRUE, estFUN = glm), "mp.cv.dev")
+  expect_gt(cv.val$gen, cv.val.recal$gen)
+  expect_true(all(cv.val$perf$perf > cv.val.recal$perf$perf))
+  
+  # Whole sequence
+  expect_is(cv <- mp.cv(formula = f, data = td, st.i = st.i, st.u = st.u, folds = folds, family = binomial, meta.method = "FE"), "mp.cv")
+  expect_true(all(class(cv) == c("mp.cv", "mp.cv.val", "mp.cv.dev")))
+  
+  # Global model
+  expect_is(global <- mp.global.2st(cv.val, urma), "mp.global")
+  expect_is(global <- mp.global.2st(cv, urma), "mp.global")
+  expect_is(global <- mp.global.2st(cv.val.recal, urma), "mp.global")
+})
+
+test_that("A stepwise stratified model can be fitted", {
+  # No stepwise
+  expect_is(step0 <- metamisc:::mp.step(formula = f, data = td, remaining.changes = c(""), st.i = st.i,
+                                        st.u = st.u, folds = folds, family = binomial, meta.method = "FE"), "mp.step")
+  expect_length(step0$cv, 1)
+  expect_is(mp.step.get.best(step0), "mp.cv")
+  
+  # Main effects
+  change.main <- c("X2", "X3")
+  expect_is(step <- metamisc:::mp.step(formula = f, data = td, remaining.changes = change.main, st.i = st.i,
+                                       st.u = st.u, folds = folds, family = binomial, meta.method = "FE"), "mp.step")
+  expect_is(mp.step.get.best(step), "mp.cv")
+  
+  # Interaction effect
+  change.interaction <- c("X2:X3")
+  expect_is(step2 <- mp.step(formula = f, data = td, remaining.changes = change.interaction, st.i = st.i,
+                             st.u = st.u, folds = folds, family = binomial, meta.method = "FE"), "mp.step")
+  expect_is(mp.step.get.best(step2), "mp.cv")
+  
+  # Entire fit
+  expect_is(fit <- mp.fit(formula = f, data = td, remaining.changes = change.main, st.i = st.i,
+                          st.u = st.u, folds = folds, family = binomial, max.steps = 3, meta.method = "FE"), "mp.fit")
+  expect_equal(fit$best.step, "s1") # for this data and seed
+})

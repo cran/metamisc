@@ -474,7 +474,7 @@ ma.perf <- function(object, method = "REML", test = "knha", ...) {
     # valmeta does not produce tau by default. But can be obtained from ma$fit if "ret.fit=T")
     ma <- valmeta(measure = "cstat", cstat = object[["estimate"]], cstat.se = object[["se"]],
                   cstat.cilb = object[,"ci.lb"], cstat.ciub = object[,"ci.ub"],
-                  method = method, ret.fit = TRUE, test = test)
+                  method = method, test = test)
     return(data.frame(est     = ma$est,
                       se      = ma$fit$se,
                       ci.lb   = ma$ci.lb,

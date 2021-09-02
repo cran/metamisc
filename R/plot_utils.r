@@ -42,6 +42,15 @@ forest <- function(...)
 #' @param refline Optional numeric specifying a reference line
 #' @param label.summary Optional character string specifying the label for the summary estimate
 #' @param label.predint Optional character string specifying the label for the (approximate) prediction interval
+#' @param nrows.before.summary How many empty rows should be introduced between the study results and the summary estimates
+#' @param study.digits How many significant digits should be used to print the stuy results
+#' @param study.shape Plotting symbol to use for the study results. By default, a filled square is used.
+#' @param col.diamond The filling color for the diamond representing the summary estimate. 
+#' E.g. "red", "blue", or hex color code ("#2e8aff")
+#' @param col.predint Line color for the prediction interval. E.g. "red", "blue", or hex color code ("#2e8aff")
+#' @param size.study Line width for the study results in mm
+#' @param size.predint Line width for the prediction interval in mm
+#' @param lty.ref Line type for the reference line
 #' @param \dots Additional arguments, which are currently ignored.
 #' 
 #' @author Thomas Debray <thomas.debray@gmail.com>
@@ -56,7 +65,7 @@ forest <- function(...)
 #' 
 #' @export
 # This could also be named forest.numeric
-forest.default <- function (theta, 
+forest.default <- function(theta, 
                     theta.ci.lb,
                     theta.ci.ub,
                     theta.slab, 
@@ -72,6 +81,14 @@ forest.default <- function (theta,
                     refline = 0,
                     label.summary = "Summary Estimate", 
                     label.predint = "Prediction Interval",
+                    nrows.before.summary = 1,
+                    study.digits = 2,
+                    study.shape = 15,
+                    col.diamond = "white",
+                    col.predint = "black",
+                    size.study = 0.5,
+                    size.predint = 1,
+                    lty.ref = "dotted",
                     ...) {
   requireNamespace("ggplot2")
 
@@ -80,9 +97,8 @@ forest.default <- function (theta,
   if (missing(theta.slab)) stop("Study labels are missing!")
   
   num.studies <- unique(c(length(theta), length(theta.ci.lb), length(theta.ci.ub), length(theta.slab)))
-  if (length(num.studies)>1) stop(paste("Too few studies for a forest plot!"))
-  
-  
+  if (length(num.studies) > 1) stop(paste("Too few studies for a forest plot!"))
+
   #Extract data
   yi <- theta
   k <- length(theta)
@@ -111,13 +127,11 @@ forest.default <- function (theta,
   if (NA %in% c(theta.summary.pi.lb, theta.summary.pi.ub)) {
     add.predint <- FALSE
   }
-    
-  
   
   # Determine ordering
-  if (sort=="asc") {
-    i.index <- order(yi)
-  } else if (sort=="desc") {
+  if (sort == "asc") {
+    i.index <- order(yi, decreasing = FALSE)
+  } else if (sort == "desc") {
     i.index <- order(yi, decreasing = TRUE)
   } else {
     i.index <- 1:length(yi)
@@ -148,20 +162,44 @@ forest.default <- function (theta,
   } 
   
   
-  ALL <- data.frame(study=slab, mean=yi, m.lower=ci.lb, m.upper=ci.ub, order=length(yi):1, scat=scat)
+  ALL <- data.frame("study" = slab, 
+                    "mean" = yi, 
+                    "m.lower" = ci.lb, 
+                    "m.upper" = ci.ub, 
+                    "order" = length(yi):1, 
+                    "scat" = scat)
   
+  # Add extra space between the study results and the summary estimates
+  rows.summaries <- which(ALL$study %in% c(label.summary, label.predint))
+  ALL$order[rows.summaries] <- ALL$order[rows.summaries] - nrows.before.summary
 
-  # reorder factor levels based on another variable (HPD.mean)
+  # reorder factor levels based on another variable (by yi)
   ALL$study.ES_order <- reorder(ALL$study, ALL$order, mean) 
   
+  # Information for secondary axis
+  labels_axis2 <- paste(format(ALL$mean, digits = study.digits, nsmall=2), " [", 
+                        format(ALL$m.lower, digits = study.digits, nsmall=2), " - ", 
+                        format(ALL$m.upper, digits = study.digits, nsmall=2), "]", sep = "")
+  
+  
   p <- with(ALL, ggplot(ALL[!is.na(ALL$mean), ], 
-                        aes(x = study.ES_order, y = mean, ymin = m.lower, ymax = m.upper)) +
-              geom_pointrange(data = subset(ALL, scat == 1)) + 
-              scale_x_discrete(limits=rev(slab)) + #change order of studies
-              coord_flip() + 
+                        aes(x = order, y = mean, ymin = m.lower, ymax = m.upper)) +
               theme +
+              theme(axis.ticks.y.right = element_blank(),
+                    panel.grid.minor.y = element_blank()) +
+              geom_pointrange(data = subset(ALL, scat == 1), shape = study.shape, size = size.study) + 
+              scale_x_continuous(
+                breaks   = order,
+                labels   = study,
+                sec.axis = ggplot2::sec_axis(
+                  ~ .,
+                  breaks = order,
+                  labels = labels_axis2)
+                ) +
+              coord_flip() + 
               ylab(xlab) + 
               xlab(""))
+
   
   if (!missing(xlim)) {
     p <- p + ylim(xlim)
@@ -175,7 +213,7 @@ forest.default <- function (theta,
   # Add refline
   if (!missing(refline)) {
     if (is.numeric(refline)) {
-      p <- p + geom_hline(yintercept = refline,  linetype = "dotted") 
+      p <- p + geom_hline(yintercept = refline,  linetype = lty.ref) 
     }
   }
   
@@ -185,21 +223,31 @@ forest.default <- function (theta,
     g2$ci.upper <- theta.summary.ci.ub
     g2$ci.lower <- theta.summary.ci.lb
     
-    g3 <- with(ALL, subset(ALL, study == label.summary))
-    g3$pi.upper <- theta.summary.pi.ub
-    g3$pi.lower <- theta.summary.pi.lb
+    
+    # Add confidence interval of the summary estimate
+    p <- p + with(g2, geom_errorbar(data = g2, aes(ymin = ci.lower, ymax = ci.upper, x = order), width = 0.5, size=1.0))
+    
+    # Add summary estimate
+    p <- p + with(g2, geom_point(data = g2, aes(x = order, y = mean), shape=23, size=3, fill = col.diamond))
+    
+    # Add diaomond
+    #df_diamond <- data.frame(row = c(g2$order+0.5, g2$order, g2$order-0.5, g2$order), ci = c(0, 1, 0, 0))
+    #print(df_diamond)
+    #p <- p + geom_polygon(data = df_diamond, aes(x = row, y = ci))
     
     # Add (approximate) prediction interval
     if (add.predint) {
-      p <- p + with(g3, geom_errorbar(data=g3, aes(ymin = pi.lower, ymax = pi.upper, x=label.predint), 
-                                      width = 0.5, size=1.0, linetype=predint.linetype))
+      g3 <- with(ALL, subset(ALL, study == label.predint))
+      g3$pi.upper <- theta.summary.pi.ub
+      g3$pi.lower <- theta.summary.pi.lb
+      
+      p <- p + with(g3, geom_errorbar(data = g3, 
+                             aes(ymin = pi.lower, ymax = pi.upper, x = order), 
+                             size = size.predint, 
+                             width = 0.5,
+                             color = col.predint,
+                             linetype = predint.linetype))
     }
-    
-    # Add confidence interval of the summary estimate
-    p <- p + with(g2, geom_errorbar(data=g2, aes(ymin = ci.lower, ymax = ci.upper, x=label.summary), width = 0.5, size=1.0))
-    
-    # Add summary estimate
-    p <- p + with(g2, geom_point(data=g2, shape=23, size=3, fill="white"))
   }
   
 
@@ -286,5 +334,54 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
       print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
                                       layout.pos.col = matchidx$col))
     }
+  }
+}
+
+#' Posterior distribution of estimated model parameters
+#' 
+#' Generate a plot of the posterior distribution
+#' 
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' @param \dots Additional arguments, which are currently ignored.
+#' 
+#' @details This is a generic function. 
+#' 
+#' @export dplot
+dplot <- function(...)
+  UseMethod("dplot")
+
+
+#' Posterior distribution of estimated model parameters
+#' 
+#' Generate a plot of the posterior distribution
+#' 
+#' @param x An object of class \code{"mcmc.list"}
+#' @param P Optional dataframe describing the parameters to plot and their respective names
+#' @param plot_type Optional character string to specify whether a density plot (\code{"dens"}) or 
+#' histogram (\code{"hist"}) should be displayed.
+#' @param \ldots Additional arguments which are currently not used
+#' 
+#' 
+#' @keywords meta-analysis density distribution
+#'             
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' 
+#' @export
+dplot.mcmc.list <- function(x, P, plot_type = "dens", ...) {
+  requireNamespace("ggmcmc")
+  
+  if (!missing(P)) {
+    S <- ggmcmc::ggs(x, par_labels = P, sort = FALSE)
+    S <- subset(S, S$ParameterOriginal %in% P$Parameter)
+  } else {
+    S <- ggmcmc::ggs(x, sort = FALSE)
+  }
+  
+  if (plot_type == "dens") {
+    ggmcmc::ggs_density(S)
+  } else if (plot_type == "hist") {
+    ggmcmc::ggs_histogram(S)
+  } else {
+    stop("Invalid plot type")
   }
 }

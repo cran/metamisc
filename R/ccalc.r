@@ -33,7 +33,7 @@
 #' 
 #' \subsection{Restoring the c-statistic}{
 #' For studies where the c-statistic is missing, it is estimated from the standard deviation of the linear predictor 
-#' (\code{theta.source="std.dev(LP)"). The corresponding method is described by White et al. (2015). }.
+#' (\code{theta.source="std.dev(LP)"}). The corresponding method is described by White et al. (2015).
 #' }
 #' 
 #' \subsection{Restoring the standard error of the c-statistic}{
@@ -44,9 +44,9 @@
 #' }
 #' 
 #' @references 
-#' Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review and meta-analysis of prediction model performance. \emph{BMJ}. 2017;356:i6460. 
+#' Debray TPA, Damen JAAG, Snell KIE, Ensor J, Hooft L, Reitsma JB, et al. A guide to systematic review and meta-analysis of prediction model performance. BMJ. 2017;356:i6460. 
 #' 
-#' Debray TPA, Damen JAAG, Riley R, Snell KIE, Reitsma JB, Hooft L, et al. A framework for meta-analysis of prediction model studies with binary and time-to-event outcomes. \emph{Stat Methods Med Res}. 2019 Sep;28(9):2768--86. 
+#' Debray TPA, Damen JAAG, Riley R, Snell KIE, Reitsma JB, Hooft L, et al. A framework for meta-analysis of  prediction model studies with binary and time-to-event outcomes. Stat Methods Med Res. 2018; In press. 
 #' 
 #' Hanley JA, McNeil BJ. The meaning and use of the area under a receiver operating characteristic (ROC) 
 #' curve. \emph{Radiology}. 1982; 143(1):29--36.
@@ -143,7 +143,7 @@ ccalc <- function(cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv, sd.LP, N,
   O             <- eval(mf.O, data, enclos=sys.frame(sys.parent()))
   mf.Po         <- mf[[match("Po", names(mf))]]
   Po            <- eval(mf.Po, data, enclos=sys.frame(sys.parent()))
-
+  
   
   
   #######################################################################################
@@ -232,7 +232,7 @@ ccalc <- function(cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv, sd.LP, N,
   if (!approx.se.method %in% c(2,4)) {
     stop("Invalid method for restoring the SE of the c-statistic!")
   }
-    
+  
   # Calculate O and N from other information if possible
   O <- ifelse(is.na(O), Po*N, O)
   N <- ifelse(is.na(N), O/Po, N)
@@ -243,9 +243,9 @@ ccalc <- function(cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv, sd.LP, N,
   te.method <- c("c-statistic", "std.dev(LP)")
   te.orig   <- calculate.cstat.theta(cstat=cstat, g=g)
   te.white  <- calculate.cstat.sdPI(sdPI=sd.LP, g=g)
-
+  
   te.dat <- cbind(te.orig, te.white)
-    
+  
   # For each study, find the first colum without missing
   myfun = function(dat) { which.min(is.na(dat)) }
   
@@ -268,38 +268,38 @@ ccalc <- function(cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv, sd.LP, N,
   tv.ci      <- restore.c.var.ci(cil=cstat.cilb, ciu=cstat.ciub, level=cstat.cilv, g=g) # Derived from 95% confidence interval
   tv.hanley  <- restore.c.var.hanley(cstat=cstat, N.subjects=N, N.events=O, restore.method=approx.se.method, g=g)
   tv.hanley2 <- restore.c.var.hanley2(sd.LP=sd.LP, N.subjects=N, N.events=O, restore.method=approx.se.method, g=g)
-    
-    # Save all estimated variances. The order of the columns indicates the priority             
-    dat <-cbind(tv.se, tv.ci, tv.hanley, tv.hanley2)  
-    
-    sel.var <- apply(dat, 1, myfun)
-    theta.var <- dat[cbind(seq_along(sel.var), sel.var)]                            
-    theta.var.source <-  tv.method[sel.var]
-    
-    # Calculate the desired confidence intervals
-    theta.cil[is.na(theta.cil)] <- (theta+qnorm((1-level)/2)*sqrt(theta.var))[is.na(theta.cil)]
-    theta.ciu[is.na(theta.ciu)] <- (theta+qnorm((1+level)/2)*sqrt(theta.var))[is.na(theta.ciu)]
-    
-    
-    # Store results, and method for calculating SE
-    ds <- data.frame(theta=theta, theta.se=sqrt(theta.var), theta.cilb=theta.cil, theta.ciub=theta.ciu, 
-                     theta.source=theta.source, theta.se.source=theta.var.source)
   
-    if(is.null(slab) & !no.data) {
-      slab <- rownames(data)
-      rownames(ds) <- slab
-    } else if (!is.null(slab)) {
-      slab <- make.unique(as.character(slab))
-      rownames(ds) <- slab
-    }
-    
-    # Add some attributes specifying the nature of the (untransformed) estimatess
-    attr(ds, 'estimand') <- "c-statistic"
-    attr(ds, 'theta_scale') <- g
-    attr(ds, 'plot_refline') <- 0.5
-    attr(ds, 'plot_lim') <- c(0,1)
-    
-    class(ds) <- c("mm_perf", class(ds))
-    
-    return(ds)
+  # Save all estimated variances. The order of the columns indicates the priority             
+  dat <-cbind(tv.se, tv.ci, tv.hanley, tv.hanley2)  
+  
+  sel.var <- apply(dat, 1, myfun)
+  theta.var <- dat[cbind(seq_along(sel.var), sel.var)]                            
+  theta.var.source <-  tv.method[sel.var]
+  
+  # Calculate the desired confidence intervals
+  theta.cil[is.na(theta.cil)] <- (theta+qnorm((1-level)/2)*sqrt(theta.var))[is.na(theta.cil)]
+  theta.ciu[is.na(theta.ciu)] <- (theta+qnorm((1+level)/2)*sqrt(theta.var))[is.na(theta.ciu)]
+  
+  
+  # Store results, and method for calculating SE
+  ds <- data.frame(theta=theta, theta.se=sqrt(theta.var), theta.cilb=theta.cil, theta.ciub=theta.ciu, 
+                   theta.source=theta.source, theta.se.source=theta.var.source)
+  
+  if(is.null(slab) & !no.data) {
+    slab <- rownames(data)
+    rownames(ds) <- slab
+  } else if (!is.null(slab)) {
+    slab <- make.unique(as.character(slab))
+    rownames(ds) <- slab
+  }
+  
+  # Add some attributes specifying the nature of the (untransformed) estimatess
+  attr(ds, 'estimand') <- "c-statistic"
+  attr(ds, 'theta_scale') <- g
+  attr(ds, 'plot_refline') <- 0.5
+  attr(ds, 'plot_lim') <- c(0,1)
+  
+  class(ds) <- c("mm_perf", class(ds))
+  
+  return(ds)
 }

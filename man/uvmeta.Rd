@@ -14,7 +14,6 @@ uvmeta(
   na.action,
   n.chains = 4,
   pars,
-  ret.fit = FALSE,
   verbose = FALSE,
   ...
 )
@@ -47,12 +46,14 @@ The default number of chains is 4.}
 \item{pars}{Optional list with additional arguments. The width of confidence, credibility and prediction intervals is 
 defined by \code{level} (defaults to 0.95). 
 The following parameters configure the MCMC sampling procedure:  
-\code{hp.mu.mean} (Hyperparameter: mean of the prior distribution of the fixed/random effects model, defaults to zero), 
-\code{hp.mu.var} (Hyperparameter: variance of the prior distribution of the fixed/random effects model, defaults to 1000),
-\code{hp.tau.min} (Hyperparameter: mininum value for the between-study standard deviation, defaults to 0),
-\code{hp.tau.max} (Hyperparameter: maximum value for the between-study standard deviation, defaults to 100).}
-
-\item{ret.fit}{logical indicating whether the full results from the fitted model should also be returned.}
+\code{hp.mu.mean} (mean of the prior distribution of the random effects model, defaults to 0), 
+\code{hp.mu.var} (variance of the prior distribution of the random effects model, defaults to 1E6), 
+\code{hp.tau.min} (minimum value for the between-study standard deviation, defaults to 0), 
+\code{hp.tau.max} (maximum value for the between-study standard deviation, defaults to 2), 
+\code{hp.tau.sigma} (standard deviation of the prior distribution for the between-study standard-deviation), 
+\code{hp.tau.dist} (prior distribution for the between-study standard-deviation. Defaults to \code{"dunif"}), 
+\code{hp.tau.df} (degrees of freedom for the prior distribution for the between-study standard-deviation. 
+Defaults to 3).}
 
 \item{verbose}{If TRUE then messages generated during the fitting process will be displayed.}
 

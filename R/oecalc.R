@@ -299,36 +299,6 @@ oecalc <- function(OE, OE.se, OE.cilb, OE.ciub, OE.cilv, EO, EO.se, citl, citl.s
   return(ds)
 }
 
-# Calculate OE and its error variance from O, E and N
-resoe.O.E.N <- function(O, E, N, correction, g=NULL) {
-  
-  k <- length(O)
-  out <- array(NA, dim=c(k,2))
-  cc <- which(E==0)
-  E[cc] <- E[cc]+correction
-  O[cc] <- O[cc]+correction
-  N[cc] <- N[cc]+correction
-  out[,1] <- O/E 
-  out[,2] <- ((O*(1-O/N))/(E**2)) # Error variance
-  
-  if(is.null(g)) {
-    return (out)
-  }
-
-  toe <- toe.var <- rep(NA, k) # Transformed OE and its error variance
-
-  for (i in 1:k) {
-    oei <- out[i,1]
-    toe[i] <- eval(parse(text=g), list(OE = oei))
-    vi  <- out[i,2]
-    names(oei) <- names(vi) <- "OE"
-    toe.deriv <- deltaMethod(object=oei, g=g, vcov.=vi)
-    toe.var[i] <- as.numeric(toe.deriv["SE"])**2
-  }
-  
-  out <- cbind(toe, toe.var)
-  return (out)
-}
 
 resoe.O.Pe.N <- function(O, Pe, N, correction, g=NULL) {
   return(resoe.O.E.N(O=O, E=Pe*N, N=N, correction=correction, g=g))
@@ -350,182 +320,176 @@ resoe.O.Pe.E <- function(O, Pe, E, correction, g=NULL) {
   return(resoe.O.E.N(O=O, E=E, N=E/Pe, correction=correction, g=g))
 }
 
-resoe.Po.Pe.sePo <- function(Po, Pe, Po.se, g=NULL) {
-  k <- length(Po)
-  out <- array(NA, dim=c(k,2))
+
+# Calculate OE and its error variance from O, E and N
+resoe.O.E.N <- function(O, E, N, correction, g=NULL) {
+  numstudies <- length(O)
+  dat_OE <- dat_g_OE <- matrix(NA, nrow = numstudies, ncol = 2)
+  colnames(dat_OE) <- c("OE", "var_OE")
+  colnames(dat_g_OE) <- c("est", "var_est")
   
-  out[,1] <- Po/Pe
-  out[,2] <- Po.se**2/(Pe**2)
+  cc <- which(E == 0)
+  E[cc] <- E[cc] + correction
+  O[cc] <- O[cc] + correction
+  N[cc] <- N[cc] + correction
   
-  if(is.null(g)) {
-    return (out)
+  dat_OE[,1] <- O/E 
+  dat_OE[,2] <- ((O*(1-O/N))/(E**2)) # Error variance
+  
+  if (!is.null(g)) {
+    # Apply delta method to the transformation
+    gd <- deriv(parse(text = g), "OE") # Take the derivative of g
+    
+    dat <- data.frame(OE = dat_OE[,1])
+    g_OE <- eval(gd, envir = dat)
+    dat_g_OE[,1] <-  g_OE # Extract the transformed OE ratio
+    dat_g_OE[,2] <- (attr(g_OE, "grad")**2) * dat_OE[,2] # Derive the variance of the transformed OE ratio
+    return(dat_g_OE)
   }
-  
-  toe <- toe.var <- rep(NA, k) #Transformed OE and its error variance
-  
-  for (i in 1:k) {
-    oei <- out[i,1]
-    toe[i] <- eval(parse(text=g), list(OE = oei))
-    vi  <- out[i,2]
-    names(oei) <- names(vi) <- "OE"
-    toe.var[i] <- as.numeric((deltaMethod(object=oei, g=g, vcov.=vi))["SE"])**2
-  }
-  
-  out <- cbind(toe, toe.var)
-  return (out)
-  
+  return(dat_OE)
 }
 
-resoe.EO.se  <- function(EO, EO.se, g=NULL) {
-  k <- length(EO)
-  out <- array(NA, dim=c(k,2))
+resoe.Po.Pe.sePo <- function(Po, Pe, Po.se, g = NULL) {
+  numstudies <- length(Po)
+  dat_OE <- dat_g_OE <- matrix(NA, nrow = numstudies, ncol = 2)
+  colnames(dat_OE) <- c("OE", "var_OE")
+  colnames(dat_g_OE) <- c("est", "var_est")
   
-  # Var(1/x) = Var(EO)*(d(1/x)/d(x))**2 = Var(EO) * (-1/EO**2)**2
-  out[,1] <- 1/EO
-  out[,2] <- (EO.se**2)/(EO**4)
+  dat_OE[,1] <- Po/Pe
+  dat_OE[,2] <- Po.se**2/(Pe**2)
   
-  if(is.null(g)) {
-    return (out)
+  if (!is.null(g)) {
+    # Apply delta method to the transformation
+    gd <- deriv(parse(text = g), "OE") # Take the derivative of g
+    
+    dat <- data.frame(OE = dat_OE[,1])
+    g_OE <- eval(gd, envir = dat)
+    dat_g_OE[,1] <-  g_OE # Extract the transformed OE ratio
+    dat_g_OE[,2] <- (attr(g_OE, "grad")**2) * dat_OE[,2] # Derive the variance of the transformed OE ratio
+    return(dat_g_OE)
   }
+  return(dat_OE)
+}
+
+resoe.EO.se  <- function(EO, EO.se, g = NULL) {
+  numstudies <- length(EO)
+  dat_OE <- dat_g_OE <- matrix(NA, nrow = numstudies, ncol = 2)
+  colnames(dat_OE) <- c("OE", "var_OE")
+  colnames(dat_g_OE) <- c("est", "var_est")
   
-  toe <- toe.var <- rep(NA, k) #Transformed OE and its error variance
-  
-  for (i in 1:k) {
-    oei <- out[i,1]
-    toe[i] <- eval(parse(text=g), list(OE = oei))
-    vi  <- out[i,2]
-    names(oei) <- names(vi) <- "OE"
-    toe.var[i] <- as.numeric((deltaMethod(object=oei, g=g, vcov.=vi))["SE"])**2
+  dat_OE[,1] <- 1/EO
+  dat_OE[,2] <- (EO.se**2)/(EO**4)
+ 
+  if (!is.null(g)) {
+    # Apply delta method to the transformation
+    gd <- deriv(parse(text = g), "OE") # Take the derivative of g
+    
+    dat <- data.frame(OE = dat_OE[,1])
+    g_OE <- eval(gd, envir = dat)
+    dat_g_OE[,1] <-  g_OE # Extract the transformed OE ratio
+    dat_g_OE[,2] <- (attr(g_OE, "grad")**2) * dat_OE[,2] # Derive the variance of the transformed OE ratio
+    return(dat_g_OE)
   }
-  
-  out <- cbind(toe, toe.var)
-  return (out)
+  return(dat_OE)
 }
   
-resoe.OE.se <- function(OE, OE.se, g=NULL) {
-  k <- length(OE)
-  out <- array(NA, dim=c(k,2))
-  out[,1] <- OE
-  out[,2] <- OE.se**2
+resoe.OE.se <- function(OE, OE.se, g = NULL) {
+  numstudies <- length(OE)
+  dat_OE <- dat_g_OE <- matrix(NA, nrow = numstudies, ncol = 2)
+  colnames(dat_OE) <- c("OE", "var_OE")
+  colnames(dat_g_OE) <- c("est", "var_est")
   
-  if(is.null(g)) {
-    return (out)
+  dat_OE[,1] <- OE
+  dat_OE[,2] <- OE.se**2
+  
+  if (!is.null(g)) {
+    # Apply delta method to the transformation
+    gd <- deriv(parse(text = g), "OE") # Take the derivative of g
+    
+    dat <- data.frame(OE = dat_OE[,1])
+    g_OE <- eval(gd, envir = dat)
+    dat_g_OE[,1] <-  g_OE # Extract the transformed OE ratio
+    dat_g_OE[,2] <- (attr(g_OE, "grad")**2) * dat_OE[,2] # Derive the variance of the transformed OE ratio
+    return(dat_g_OE)
   }
-  
-  toe <- toe.var <- rep(NA, k) #Transformed OE and its error variance
-  
-  for (i in 1:k) {
-    oei <- out[i,1]
-    toe[i] <- eval(parse(text=g), list(OE = oei))
-    vi  <- out[i,2]
-    names(oei) <- names(vi) <- "OE"
-    toe.var[i] <- as.numeric((deltaMethod(object=oei, g=g, vcov.=vi))["SE"])**2
-  }
-  
-  out <- cbind(toe, toe.var)
-  return (out)
+  return(dat_OE)
 }
 
 resoe.OE.ci <- function(OE, OE.cilb, OE.ciub, OE.cilv, g=NULL) {
-  k <- length(OE)
-  out <- array(NA, dim=c(k,2))
-  out[,1] <- OE
-  out[,2] <- ((OE.ciub - OE.cilb)/(2*qnorm(0.5+OE.cilv/2)))**2 #Derive from 95% CI
+  numstudies <- length(OE)
+  dat_OE <- dat_g_OE <- matrix(NA, nrow = numstudies, ncol = 2)
+  colnames(dat_OE) <- c("OE", "var_OE")
+  colnames(dat_g_OE) <- c("est", "var_est")
   
-  if(is.null(g)) {
-    return (out)
+  dat_OE[,1] <- OE
+  dat_OE[,2] <- ((OE.ciub - OE.cilb)/(2*qnorm(0.5 + OE.cilv/2)))**2 #Derive the error variance from 95% CI
+  
+  if (!is.null(g)) {
+    # Apply delta method to the transformation
+    gd <- deriv(parse(text = g), "OE") # Take the derivative of g
+    
+    dat <- data.frame(OE = dat_OE[,1])
+    g_OE <- eval(gd, envir = dat)
+    dat_g_OE[,1] <-  g_OE # Extract the transformed OE ratio
+    dat_g_OE[,2] <- (attr(g_OE, "grad")**2) * dat_OE[,2] # Derive the variance of the transformed OE ratio
+    return(dat_g_OE)
   }
-  
-  toe <- toe.var <- rep(NA, k) # Transformed OE and its error variance
-  
-  for (i in 1:k) {
-    toe[i] <- eval(parse(text=g), list(OE = out[i,1]))
-    toe.cilb <- eval(parse(text=g), list(OE = OE.cilb[i]))
-    toe.ciub <- eval(parse(text=g), list(OE = OE.ciub[i]))
-    toe.var[i] <- ((toe.ciub - toe.cilb)/(2*qnorm(0.5+OE.cilv[i]/2)))**2 #Derive from 95% CI
-  }
-  
-  out <- cbind(toe, toe.var)
-  return (out)
+  return(dat_OE)
 }
 
-resoe.O.E <- function(O, E, correction, g=NULL) {
-  k <- length(O)
-  out <- array(NA, dim=c(k,2))
+resoe.O.E <- function(O, E, correction, g = NULL) {
+  numstudies <- length(O)
+  dat_OE <- dat_g_OE <- matrix(NA, nrow = numstudies, ncol = 2)
+  colnames(dat_OE) <- c("OE", "var_OE")
+  colnames(dat_g_OE) <- c("est", "var_est")
   
-  cc <- which(E==0)
-  E[cc] <- E[cc]+correction
-  O[cc] <- O[cc]+correction
-  out[,1] <- O/E
-  out[,2] <- (O/(E**2))
+  cc <- which(E == 0)
+  E[cc] <- E[cc] + correction
+  O[cc] <- O[cc] + correction
   
-  if(is.null(g)) {
-    return (out)
+  dat_OE[,1] <- O/E
+  dat_OE[,2] <- (O/(E**2))
+  
+  if (!is.null(g)) {
+    # Apply delta method to the transformation
+    gd <- deriv(parse(text = g), "OE") # Take the derivative of g
+    
+    dat <- data.frame(OE = dat_OE[,1])
+    g_OE <- eval(gd, envir = dat)
+    dat_g_OE[,1] <-  g_OE # Extract the transformed OE ratio
+    dat_g_OE[,2] <- (attr(g_OE, "grad")**2) * dat_OE[,2] # Derive the variance of the transformed OE ratio
+    return(dat_g_OE)
   }
-  
-  toe <- toe.var <- rep(NA, k) #Transformed OE and its error variance
-  
-  for (i in 1:k) {
-    oei <- out[i,1]
-    vi  <- out[i,2]
-    names(oei) <- names(vi) <- "OE"
-    toe[i] <- eval(parse(text=g), list(OE = oei))
-    toe.var[i] <- as.numeric((deltaMethod(object=oei, g=g, vcov.=vi))["SE"])**2
-  }
-  
-  out <- cbind(toe, toe.var)
-  return (out)
+  return(dat_OE)
 }
 
-resoe.citl <- function(citl, citl.se, Po, O, N, correction, g=NULL) {
-  k <- length(citl)
-  out <- array(NA, dim=c(k,2))
-  
-  cc <- which(O==0)
-  O[cc] <- O[cc]+correction
-  N[cc] <- N[cc]+correction
-  Po[is.na(Po)] <- (O/N)[is.na(Po)]
-  
-  out[,1] <- -(exp(citl)*Po-exp(citl)-Po)
-  
-  for (i in 1:k) {
-    citli <- citl[i]
-    vi  <- citl.se[i]**2
-    names(citli) <- names(vi) <- "citl"
-    expr = paste("-(exp(citl)*",Po[i], "-exp(citl)-", Po[i],")")
-    out[i,2] <- as.numeric((deltaMethod(object=citli, g=expr, vcov.=vi)["SE"]))**2
-  }
+resoe.citl <- function(citl, citl.se, Po, O, N, correction, g = NULL) {
+  numstudies <- length(O)
+  dat_citl <- matrix(NA, nrow = numstudies, ncol = 2)
+  colnames(dat_citl) <- c("citl", "var_citl")
   
   warning("Implementation not finalized!")
-  
-  if(is.null(g)) {
-    return (out)
-  }
-  
-  warning("Implementation still needed")
+  return(dat_citl)
 }
 
-resoe.Po.Pe <- function (Po, Pe, g=NULL) {
-  k <- length(Po)
-  out <- array(NA, dim=c(k,2))
+resoe.Po.Pe <- function (Po, Pe, g = NULL) {
+  numstudies <- length(Po)
+  dat_OE <- dat_g_OE <- matrix(NA, nrow = numstudies, ncol = 2)
+  colnames(dat_OE) <- c("OE", "var_OE")
+  colnames(dat_g_OE) <- c("est", "var_est")
   
-  out[,1] <- Po/Pe
-  out[,2] <- NA # SE cannot be estimated from Po and Pe alone
+  dat_OE[,1] <- Po/Pe
+  dat_OE[,2] <- NA # SE cannot be estimated from Po and Pe alone
   
-  if(is.null(g)) {
-    return (out)
+  if (!is.null(g)) {
+    # Apply delta method to the transformation
+    gd <- deriv(parse(text = g), "OE") # Take the derivative of g
+    
+    dat <- data.frame(OE = dat_OE[,1])
+    g_OE <- eval(gd, envir = dat)
+    dat_g_OE[,1] <-  g_OE # Extract the transformed OE ratio
+    dat_g_OE[,2] <- NA  # SE cannot be estimated from Po and Pe alone
+    return(dat_g_OE)
   }
-  
-  toe <- toe.var <- rep(NA, k) #Transformed OE and its error variance
-  
-  for (i in 1:k) {
-    oei <- out[i,1]
-    vi  <- out[i,2]
-    names(oei) <- names(vi) <- "OE"
-    toe[i] <- eval(parse(text=g), list(OE = oei))
-    toe.var[i] <- NA  # SE cannot be estimated from Po and Pe alone
-  }
-  
-  out <- cbind(toe, toe.var)
-  return (out)
+  return(dat_OE)
 }

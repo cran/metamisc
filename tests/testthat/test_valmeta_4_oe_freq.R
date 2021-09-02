@@ -82,11 +82,13 @@ test_that("Random effects meta-analysis of total O:E ratio works (Poisson distri
 
 test_that("Generating a plot", {
 
-  expect_is(fit1.valmeta <- with(EuroSCORE, valmeta(measure="OE",
-                                          O=n.events,
-                                          E=e.events,
+  expect_is(fit1.valmeta <- valmeta(measure = "OE",
+                                          O = n.events,
+                                          E = e.events,
                                           test = "z",
-                                          method="FE", slab = Study))
+                                          method="FE", 
+                                    slab = Study, 
+                                    data = EuroSCORE)
             , "valmeta")
 
   plot(fit1.valmeta)

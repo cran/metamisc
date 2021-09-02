@@ -1,12 +1,12 @@
 context("metapred 1. utility functions")
 
 test_that("Generating a block diagonal matrix works", {
-  m1 <- matrix(c(1,2,3,4), nrow=2, ncol=2)
-  m2 <- matrix(c(5,6,7,8), nrow=2, ncol=2)
-  m3 <- matrix(c(9,10,11,12), nrow=2, ncol=2)
+  m1 <- matrix(c(1,2,3,4), nrow = 2, ncol = 2)
+  m2 <- matrix(c(5,6,7,8), nrow = 2, ncol = 2)
+  m3 <- matrix(c(9,10,11,12), nrow = 2, ncol = 2)
   
   m_block <- blockMatrixDiagonal(m1, m2, m3)
-  m_eval <- matrix(c(1,2,0,0,0,0,3,4,0,0,0,0,0,0,5,6,0,0,0,0,7,8,0,0,0,0,0,0,9,10,0,0,0,0,11,12), nrow=6, ncol=6)
+  m_eval <- matrix(c(1,2,0,0,0,0,3,4,0,0,0,0,0,0,5,6,0,0,0,0,7,8,0,0,0,0,0,0,9,10,0,0,0,0,11,12), nrow = 6, ncol = 6)
   expect_identical(m_block, m_eval)
   
   m_list <- list(m1, m2, m3)
@@ -14,7 +14,7 @@ test_that("Generating a block diagonal matrix works", {
   expect_identical(m_block2, m_eval)
 })
 
-test_that ("Multivariate meta-analysis works", {
+test_that("Multivariate meta-analysis works", {
   
   # Reconstruct berkey98 data from mvmeta
   m1 <- matrix(c(0.0075, 0.0030, 0.0030, 0.0077), nrow = 2, ncol = 2)
@@ -22,7 +22,7 @@ test_that ("Multivariate meta-analysis works", {
   m3 <- matrix(c(0.0021, 0.0007, 0.0007, 0.0014), nrow = 2, ncol = 2)
   m4 <- matrix(c(0.0029, 0.0009, 0.0009, 0.0015), nrow = 2, ncol = 2)
   m5 <- matrix(c(0.0148, 0.0072, 0.0072, 0.0304), nrow = 2, ncol = 2)
-  m_full <- array(NA, dim=c(2,2,5))
+  m_full <- array(NA, dim = c(2,2,5))
   m_full[,,1] <- m1
   m_full[,,2] <- m2
   m_full[,,3] <- m3
@@ -37,8 +37,8 @@ test_that ("Multivariate meta-analysis works", {
                       group = c("PD", "AL", "PD", "AL", "PD", "AL", "PD", "AL", "PD", "AL"),
                       study = c(1, 1, 2, 2, 3, 3, 4, 4, 5, 5))
   
-  m_fit <- rma.mv(yi = y, V = m_block, mods = ~ -1+group, random = ~ group|study, struct= "UN", data = m_dat)
-
+  m_fit <- metafor::rma.mv(yi = y, V = m_block, mods = ~ -1+group, random = ~ group|study, struct = "UN", data = m_dat)
+  
   mrma_fit <- mrma(coefficients = y, vcov = m_full)
   expect_equal(as.numeric(coefficients(m_fit)["groupAL"]), as.numeric(mrma_fit$coefficients["groupAL"])) # Was expect_identical
   expect_equal(as.numeric(coefficients(m_fit)["groupPD"]), as.numeric(mrma_fit$coefficients["groupPD"])) # Was expect_identical

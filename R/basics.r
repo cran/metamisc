@@ -28,7 +28,7 @@ generateMCMCinits <- function(n.chains, model.pars)
 #' @export
 cor2cov <- function(sigma, cormat) {
   if (length(sigma) != nrow(cormat) & length(sigma) != ncol(cormat)) {
-    stop ("Incompatible dimensions for 'sigma' and 'cormat'")
+    stop ("Invalid dimensions for 'sigma' and/or 'cormat'")
   }
   
   # Check if cormat is symmetric
@@ -112,7 +112,7 @@ extrapolateOE <- function(Po, Pe, var.Po, t.val, t.ma, N, model="normal/log") {
     
     # Use error variance of Po, which is equal to the error variance of the KM estimate
     theta.var.approx2 <- ((t.ma**2)*exp(2*t.ma*log(1-Po)/t.val)*var.Po)/((t.val**2)*((1-Po)**2)*((1-exp(t.ma*log(1-Po)/t.val))**2))
-
+    
     theta.var[is.na(var.Po)] <- theta.var.approx1[is.na(var.Po)]
     theta.var[!is.na(var.Po)] <- theta.var.approx2[!is.na(var.Po)]
   } else {
@@ -133,7 +133,7 @@ generateOEdata <- function(O, E, Po, Po.se, Pe, OE, OE.se, OE.95CI, citl, citl.s
   E <- ifelse(is.na(E), Pe*N, E)
   
   theta.cil <- theta.cul <- rep(NA, length(O))
- 
+  
   
   # Apply necessary data transformations
   if (pars$model.oe == "normal/identity") {
@@ -374,7 +374,7 @@ plotForestDeprecated <- function(vmasum, xlab, refline, ...) {
     # Add separation line on top of the figure
     abline(h = ylim[2] - 2, lty = lty[3], ...)
     
-    if (vmasum$model=="normal/logit") {
+    if (vmasum$model == "normal/logit") {
       axis(side = 1, at = c(0,0.2,0.4,0.6,0.8,1), labels = c(0, 0.2, 0.4, 0.6, 0.8, 1), cex.axis = 1, ...)
     } else if (vmasum$model == "normal/log" | vmasum$model == "poisson/log") {
       axis(side = 1, at = c(0:ceiling(max(exp(vmasum$data[,"theta.95CIu"]), na.rm=T))), labels = c(0:ceiling(max(exp(vmasum$data[,"theta.95CIu"]), na.rm=T))), cex.axis = 1, ...)

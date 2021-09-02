@@ -12,7 +12,6 @@ center <- function(x, center.in) {
   x
 }
 
-
 # Center covariates within clusters
 #
 # Centers all except for y.name and cluster.name
@@ -50,10 +49,6 @@ getFoldName <- function(st.u, f = NULL, type = NULL) {
     paste(getclName(st.u = st.u), getcvName(f = f, type = type), sep = if (length(f) > 0 || length(type) > 0) ". " else "")
 }
 
-
-# getclName <- function(st.u)
-#   paste("cl", toString(st.u), sep = " ")
-
 getclName <- function(st.u)
   paste(toString(st.u), sep = " ")
 
@@ -66,6 +61,8 @@ getStepName <- function(x)
 getCoefs  <- function(fit, ...) {
   if (inherits(fit, "multinom"))
     return(coefMultinom(fit, ...))
+  if (inherits(fit, c("glmerMod", "lmerMod")))
+    return(lme4::fixef(fit, ...))
   else return(coef(fit))
 }
 # Needs some work. Should also return some coefficient names.
@@ -73,8 +70,8 @@ coefMultinom <- function(fit, ...)
   as.vector(t(coef(fit)))
 
 # Perhaps unnecessary:
-getVars   <- function(fit, ...) diag(vcov(fit))
-getCoVars <- function(fit, ...) vcov(fit)
+getVars   <- function(fit, ...) diag(as.matrix(vcov(fit)))
+getCoVars <- function(fit, ...) as.matrix(vcov(fit))
 getSE     <- function(fit, ...) sqrt(getVars(fit))
 
 ### The following functions are for generating the folst.u for the cross-validation in metapred
@@ -167,29 +164,6 @@ successive <- function(st.u, k = NULL, ...) {
 remove.na.obs <- function(df) 
   df[apply(df, 1, function(df) sum(is.na(df))) == 0, ]
 
-# Gets the predict method. # NOTE: CODE FROM BEFORE logistf compatibility was introduced. <28 nov 2018
-# fit Model fit object.
-# two.stage logical. Is the model a two-stage model?
-# predFUN Optional function, which is immediately returned
-# ... For compatibility only.
-# getPredictMethod <- function(fit, two.stage = TRUE, predFUN = NULL, ...) {
-#   # A user written function may be supplied:
-#   if (!is.null(predFUN)) {
-#     if (is.function(predFUN)) {
-#       return(predFUN)
-#     } else return(get(as.character(predFUN), mode = "function"))
-#   }
-# 
-#   # If two-stage, the fit is used only to extract the link function.
-#   # If one-stage, fit's prediction method may be used.
-#   if (two.stage) {# Preferably mp.cv.dev should not be here. But it currently has to.
-#     if (inherits(fit, c("glm", "lm", "mp.cv.dev"))) 
-#       return(predictGLM)
-#     stop("No prediction method has been implemented for this model type yet for two-stage
-#               meta-analysis. You may supply one with the predFUN argument.")
-#   } else return(predict)
-# }
-
 # Gets the predict method.
 # fit Model fit object.
 # two.stage logical. Is the model a two-stage model?
@@ -219,6 +193,9 @@ getPredictMethod <- function(fit, two.stage = TRUE, predFUN = NULL, ...) {
     
     if (any(fit$cv[[1]]$stratum.class %in% c("glm", "lm")))
       return(predictGLM)
+    
+    if (any(fit$cv[[1]]$stratum.class %in% c("glmerMod", "lmerMod")))
+      return(predictglmer)
   }
   
   # Return default predict function if everything else fails
@@ -246,10 +223,10 @@ predictGLM <- function(object, newdata, b = NULL, f = NULL, type = "response", .
       return(fam$linkinv(lp))
   } else if (identical(type, "link"))
     return(lp)
-  # if (is.null(object$family)) lp
-  # else object$family$linkinv(lp)
 }
 
+predictglmer <- function(object, newdata, b = NULL, f = NULL, type = "response", ...)
+  predictGLM(object = object, newdata = newdata, b = b, f = f, type = type, ...)
 
 # Prediction function for logistf from the logisf package
 # Args same as those of predictGLM()
@@ -258,7 +235,9 @@ predictlogistf <- function(object, newdata, b = NULL, f = NULL, type = "response
   predictGLM(object, newdata, b = b, f = f, type = type)
 }
 
-
+### NOTE: FOR SOME REASON UNBEKNOWN TO ME logistf() and requirenamespace(logistf) alter
+# the functionalities of as.character(), thereby breaking the formula functions of
+# this package.
 ### Note: cal.int does not work with this function. Use bin.cal.int instead.
 # normal.int logical Should the intercept be recalibrated, such that Firth's correction
 # is removed from it?
@@ -294,60 +273,6 @@ logistfirth <- function(formula = attr(data, "formula"), data = parent.frame(), 
 # vcov Ignored. For compatibility only, until a better solution is implemented.
 # ... Optional arguments for rma().
 #' @importFrom metafor rma
-# urma <- function(coefficients, variances, method = "DL", vcov = NULL, ...)
-# {
-#   if (!(is.data.frame(coefficients) || is.matrix(coefficients)) || !(is.data.frame(variances) || is.matrix(variances)) )
-#     stop("coefficients and variances must both be a data.frame or matrix.")
-#   if (!identical(dim(coefficients), dim(variances)))
-#     stop("coefficients and variances must have the same dimensions.")
-# 
-#   # Gives error (below, not here ofc)
-#   # meta.b <- meta.se <- meta.tau2 <- meta.ci.lb <- meta.ci.ub <- meta.se.tau2 <- meta.pi.lb <- meta.pi.ub <- 
-#   #   rep(NA, ncol(coefficients))
-#   # meta.pi <- matrix(nrow = 2, ncol = ncol(coefficients))
-#   meta.b <- meta.se <- meta.tau2 <- rep(NA, ncol(coefficients))
-#   # meta.pi <- matrix(nrow = 2, ncol = ncol(coefficients))
-#   for (col in seq_len(ncol(coefficients))) {
-#     tryCatch(
-#       r <- metafor::rma(coefficients[ , col] , variances[ , col], method = method, ...),
-#       error = function(e) {
-#         stop(paste("Error in univariate rma of variable:", names(coefficients)[col], ",as follows:", e))
-#         }
-#     )
-#     
-#     meta.b[col]  <- r$beta
-#     meta.se[col] <- r$se
-#     meta.tau2[col] <- r$tau2
-#     
-#     # Gives error:
-#     # meta.b[col]  <- r$beta
-#     # meta.se[col] <- r$se
-#     # meta.ci.lb[col] <- r$ci.lb
-#     # meta.ci.ub[col] <- r$ci.ub
-#     # meta.tau2[col] <- r$tau2
-#     # meta.pi.lb[col] <- r$cr.lb
-#     # meta.pi.ub[col] <- r$cr.ub
-#     
-#     # Warning because this is highly unexpected!
-#     # checks because otherwise an error is returned.
-#     if (!identical(r$method, method))
-#       warning(paste("metafor::rma switched automatically from ", method, " to ", r$method, " method.", sep = ""))
-# 
-#     # if (!identical(r$method, "FE")) {
-#     #   cr <- metafor::predict.rma(r)
-#     #   meta.pi[1, col] <- cr$cr.lb
-#     #   meta.pi[2, col] <- cr$cr.ub
-#     # }
-#   }
-# 
-#   meta.v <- meta.se^2
-#   # rownames(meta.pi) <- c("pi.lb", "pi.ub")
-#   # colnames(meta.pi) <- names(meta.b) <- names(meta.v) <- names(meta.se) <- names(meta.tau2) <- colnames(coefficients)
-# 
-#   list(coefficients = meta.b, variances = meta.v, se = meta.se, tau2 = meta.tau2, tau = sqrt(meta.tau2), 
-#         method = r$method)
-# }
-
 urma <- function(coefficients, variances, method = "DL", vcov = NULL, ...) {
   if (!(is.data.frame(coefficients) || is.matrix(coefficients)) || !(is.data.frame(variances) || is.matrix(variances)) )
     stop("coefficients and variances must both be a data.frame or matrix.")
@@ -394,35 +319,42 @@ urma <- function(coefficients, variances, method = "DL", vcov = NULL, ...) {
        pi.lb = meta.pi.lb, pi.ub = meta.pi.ub, method = r$method)
 }
 
-
-
-# Multivariate Random Effects Meta-Analysis
+# Multivariate Random Effects Meta-Analysis # Old function, see new function below.
 # coefficients data.frame or matrix, containing coef
 # vcov vcov as in vcov(stratified.fit)
 # variances IGNORED.
 # TBI: method Method for meta-analysis.
 # TBI: ... Optional arguments for mvmeta().
 # #' @importFrom mvmeta mvmeta
-#mrma <- function(coefficients, vcov, variances, ...) {
-#  # Test if optional 'mvmeta' package is installed
-#  if (!requireNamespace("mvmeta", quietly = TRUE))
-#    stop("The package 'mvmeta' is currently not installed.")
-#
-#  # fit
-#  ma.fit <- mvmeta::mvmeta(as.matrix(coefficients), S = vcov) 
-#
-#  # Rename, as mvmeta changes the names.
-#  vcov <- ma.fit$vcov
-#  colnames(vcov) <- row.names(vcov) <- colnames(coefficients)
-#
-#  # Return
-#  list(coefficients = ma.fit$coefficients[1,], # [1,] to coerce to vector with names.
-#       variances = diag(vcov),
-#       se = sqrt(diag(vcov)),
-#       vcov = vcov,
-#       psi = ma.fit$Psi)
-#}
-
+# mrma <- function(coefficients, vcov, variances, ...) {
+#   # Test if optional 'mvmeta' package is installed
+#   if (!requireNamespace("mvmeta", quietly = TRUE))
+#     stop("The package 'mvmeta' is currently not installed.")
+#   
+#   # mvmeta assumes a differnt form for vcov when nvar = 1.
+#   one_var <- identical(dim(coefficients)[2], 1L)
+#   if (one_var)
+#     vcov <- as.matrix(vcov)
+#   
+#   # fit   
+#   ma.fit <- mvmeta::mvmeta(as.matrix(coefficients), S = vcov)
+#   
+#   # Rename, as mvmeta changes the names.
+#   vcov <- ma.fit$vcov
+#   colnames(vcov) <- row.names(vcov) <- colnames(coefficients)
+#   
+#   if (one_var)
+#     coefficients <- ma.fit$coefficients[1]
+#   else
+#     coefficients <- ma.fit$coefficients[1,] # [1,] to coerce to vector with names.
+#   
+#   # Return
+#   list(coefficients = coefficients, 
+#        variances = diag(vcov),
+#        se = sqrt(diag(vcov)),
+#        vcov = vcov,
+#        psi = ma.fit$Psi)
+# }
 
 # What is this?
 blockMatrixDiagonal <- function(...){  
@@ -440,7 +372,6 @@ blockMatrixDiagonal <- function(...){
   finalMatrix
 }
 
-
 ## vcov is a 3-dimensional array, where [,,i] indicates the within-study covariance of study i
 mrma <- function(coefficients, vcov, variances,  ...) {
   meta.method <- "REML" # Method for meta-analysis
@@ -451,7 +382,7 @@ mrma <- function(coefficients, vcov, variances,  ...) {
   }
   if (ncol(coefficients)==1) {
     S = data.frame(S=vcov)
-    return(urma(coefficients = coefficients, variances = S, method = meta.method, ...))
+    return(urma(coefficients = coefficients, variances = S, method = meta.method))
   }
   
   # In rma.mv, we need to supply a stacked version of all coefficients, together with a grouping variable
@@ -463,7 +394,7 @@ mrma <- function(coefficients, vcov, variances,  ...) {
     group[seq(i,length(yi), by=ncol(coefficients))] <- colnames(coefficients)[i]
   }
   # specify order of the levels to ensure that the coefficient output is in the same order as their input
-  group <- factor(group, levels = colnames(coefficients)) 
+  group <- factor(group, levels = colnames(coefficients))
   
   # Study indicator
   study <- rep(NA, length(yi))
@@ -481,17 +412,15 @@ mrma <- function(coefficients, vcov, variances,  ...) {
   }
   S <- blockMatrixDiagonal(ws_var)
   
-  ma.fit <- rma.mv(yi = yi, V = S, mods = ~ -1+group, random = ~ group|study, data = rma_dat, 
+  ma.fit <- rma.mv(yi = yi, V = S, mods = ~ -1+group, random = ~ group|study, data = rma_dat,
                    struct= "UN", method = meta.method)
-  
-  
   
   out <- list(coefficients = ma.fit$beta[,1], # [,1] to coerce to vector with names.
               variances = diag(ma.fit$vb), # The estimated variances of the fixed effects
               se = sqrt(diag(ma.fit$vb)), # The estimated SEs of the fixed effects
               vcov = ma.fit$vb,
               psi = ma.fit$tau2)
-  return(out);
+  return(out)
 }
 
 which.abs.min <- function(x) 
@@ -509,7 +438,6 @@ which.1 <- function(x)
 unlist.listofperf <- function(x, ...) 
   sapply(x, `[[`, 1)
 
-
 # Safe way of getting a function. 
 # For some reason, this function can find functions that match.fun cannot.
 # x function or character name thereof
@@ -520,20 +448,3 @@ get.function <- function(x, ...) {
   else
     return(get(as.character(x), mode = "function"))
 }
-
-
-### Maybe this is futile:
-# TD: adding this code gives me a warning on CRAN
-# Registered S3 method from a standard package overwritten by 'metamisc':
-# method from  nobs.survreg survival
-#' author Valentijn de Jong
-#' method nobs   survreg
-#' export
-#nobs.survreg <- function(object, ...)
-#  object$N
-
-#' author Valentijn de Jong
-#' method nobs   flexsurvreg
-#' export
-#nobs.flexsurvreg <- function(object, ...)
-#  object$N

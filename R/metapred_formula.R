@@ -13,7 +13,7 @@ f2tl <- function(f)
 updateFormula <- function(f, x) {
   m <- x %in% f2tl(f)
   if (any(m)) if (!all(m)) stop("formula f must either contain all or no predictors x") # if any, all x must be contained in f 
-  update.formula(f, paste("~ .", paste(if (any(m)) "-" else "+", as.character(x) ,
+  update.formula(f, paste("~ .", paste(if (any(m)) "-" else "+", as.character.default(x) ,
                                        sep = " ", collapse = " "), sep = " "  ) )
 }
 
@@ -33,7 +33,7 @@ getFormulaDiffAsChar <- function(f, g)
 # f formula
 # returns character, name of outcome
 f2o <- function(f)
-  as.character(f)[2]
+  as.character.default(f)[2]
 
 # Get intercept-only formula from a formula
 # f formula, containing outcome
@@ -45,7 +45,7 @@ f2iof <- function(f)
 # f formula
 # returns formula as: ~ right + hand + side
 f2rhsf <- function(f)
-  formula(paste(as.character(f)[1], as.character(f)[3]))
+  formula(paste(as.character.default(f)[1], as.character.default(f)[3]))
 
 # Add two formulas up: sum of two formulas # NOTE: does not handle - 1
 # f formula
