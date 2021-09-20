@@ -1,5 +1,6 @@
 context("valmeta 6. plot functionalities")
 skip_on_cran()
+library(dplyr)
 
 data(EuroSCORE)
 
@@ -26,6 +27,16 @@ test_that("Class of forest plot", {
   
 })
 
-
+test_that("Class of forest plot", {
+  
+  fit <- valmeta(measure = "OE", N=n, O=n.events, E =  e.events,
+                 slab=Study, data=EuroSCORE,
+                 method     = "ML",
+                 pars       = list(model.oe = "poisson/log"))
+  metamisc::forest(fit)
+  plot(fit)
+  
+  
+})
 
 

@@ -58,6 +58,7 @@ plot(fat(b=b, b.se=b.se), xlab = "Log hazard ratio")
 # Plot the funnel for an alternative test
 plot(fat(b=b, b.se=b.se, n.total=n.total, method="M-FIV"), xlab = "Log hazard ratio")
 
+
 }
 \author{
 Thomas Debray <thomas.debray@gmail.com>

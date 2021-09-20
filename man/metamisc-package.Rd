@@ -8,8 +8,8 @@
 %\tabular{ll}{
 %Package: \tab metamisc\cr
 %Type: \tab Package\cr
-%Version: \tab 0.2.4\cr
-%Date: \tab 2021-09-02\cr
+%Version: \tab 0.2.5\cr
+%Date: \tab 2021-09-20\cr
 %License: \tab GPL-2 \cr
 %}
 The following functionality is currently implemented: univariate meta-analysis of summary data (\code{\link{uvmeta}}), bivariate meta-analysis of correlated outcomes (\code{\link{riley}}), meta-analysis of prediction model performance (\code{\link{valmeta}}), evaluation of funnel plot asymmetry (\code{\link{fat}}). \cr

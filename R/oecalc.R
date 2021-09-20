@@ -126,6 +126,7 @@ oecalc <- function(OE, OE.se, OE.cilb, OE.ciub, OE.cilv, EO, EO.se, citl, citl.s
   mf.Po.se      <- mf[[match("Po.se", names(mf))]]
   Po.se         <- eval(mf.Po.se, data, enclos=sys.frame(sys.parent()))
   
+  
   #######################################################################################
   # Count number of studies
   #######################################################################################

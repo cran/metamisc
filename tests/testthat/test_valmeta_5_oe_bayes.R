@@ -4,17 +4,23 @@ skip_on_cran()
 library(lme4)
 library(rjags)
 library(runjags)
+library(dplyr)
 data(EuroSCORE)
 
-test_that("Bayesian random effect meta-analysis of total O:E ratio works", {
+test_that("Bayesian random effect meta-analysis of total O:E ratio", {
   
-  pars <- list(hp.tau.dist="dhalft",   # Prior for the between-study standard deviation
-               hp.tau.sigma=1.5,       # Standard deviation for 'hp.tau.dist'
-               hp.tau.df=3,            # Degrees of freedom for 'hp.tau.dist'
-               hp.tau.max=10)          # Maximum value for the between-study standard deviation
+  pars <- list(hp.tau.dist = "dhalft",   # Prior for the between-study standard deviation
+               hp.tau.sigma = 1.5,       # Standard deviation for 'hp.tau.dist'
+               hp.tau.df = 3,            # Degrees of freedom for 'hp.tau.dist'
+               hp.tau.max = 10)          # Maximum value for the between-study standard deviation
   
-  fit1 <- valmeta(measure="OE", O=EuroSCORE$n.events, 
-                  E=EuroSCORE$e.events, N=EuroSCORE$n, method="BAYES", slab=EuroSCORE$Study, pars=pars)
+  fit1 <- valmeta(measure = "OE", 
+                  O = EuroSCORE$n.events, 
+                  E = EuroSCORE$e.events, 
+                  N = EuroSCORE$n, 
+                  method = "BAYES", 
+                  slab = EuroSCORE$Study, 
+                  pars = pars)
   
   expect_equal(fit1$numstudies, nrow(EuroSCORE))
   
@@ -29,5 +35,22 @@ test_that("Bayesian random effect meta-analysis of total O:E ratio works", {
   
   expect_equal(fit2$numstudies, nrow(EuroSCORE))
   expect_equal(as.character(class(fit2$fit)), "runjags")
+  
+})
+
+test_that("Adjusting JAGS sampling parameters works", {
+  
+  fit1 <- valmeta(measure = "OE", 
+                  O = EuroSCORE$n.events, 
+                  E = EuroSCORE$e.events, 
+                  N = EuroSCORE$n, 
+                  method = "BAYES", 
+                  slab = EuroSCORE$Study,
+                  n.chains = 4,
+                  burnin = 4000,
+                  sample = 10000,
+                  adapt = 1000)
+  
+  expect_equal(as.character(class(fit1$fit)), "runjags")
   
 })

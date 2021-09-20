@@ -4,7 +4,7 @@
 \alias{rmplot.valmeta}
 \title{Plot the running means of a Bayesian meta-analysis model}
 \usage{
-rmplot.valmeta(x, ...)
+\method{rmplot}{valmeta}(x, ...)
 }
 \arguments{
 \item{x}{An object of class \code{"valmeta"}}
@@ -12,6 +12,8 @@ rmplot.valmeta(x, ...)
 \item{\ldots}{Additional arguments which are currently not used}
 }
 \value{
+A \code{ggplot} object.
+
 An object of class \code{ggplot}
 }
 \description{

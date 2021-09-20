@@ -183,7 +183,7 @@ uvmeta.default <- function(r, r.se, r.vi, method="REML", test="knha", labels, na
   quantiles <- c((1-pars.default$level)/2, 0.50, (1-((1-pars.default$level)/2)))
   
   if (out$level < 0 | out$level > 1) {
-    stop ("Invalid value for 'level'!")
+    stop("Invalid value for 'level'!")
   } 
   
   
@@ -192,13 +192,23 @@ uvmeta.default <- function(r, r.se, r.vi, method="REML", test="knha", labels, na
   #############################################################################
   numstudies <- dim(ds)[1]
 
-  if(numstudies < 3) {
+  if (numstudies < 3) {
     warning("There are very few primary studies!")
+  }
+  
+  if (method == "BAYES") {
+      return(run_Bayesian_REMA(call = match.call(),
+                               method = method,
+                               data = ds, 
+                               pars = pars.default, 
+                               FUN_generate_bugs = .generateBugsREMA,
+                               n.chains = n.chains, 
+                               verbose = verbose, ...))
   }
   
   
   if (method != "BAYES") { 
-    fit <- rma(yi=r, sei=r.se, method=method, test=test, slab=out$slab, ...) 
+    fit <- metafor::rma(yi=r, sei=r.se, method=method, test=test, slab=out$slab, ...) 
     preds <- predict(fit, level=pars.default$level)
     
     # We don't use the prediction intervals from metafor, as they are based on a Normal distribution
@@ -216,15 +226,6 @@ uvmeta.default <- function(r, r.se, r.vi, method="REML", test="knha", labels, na
     out$fit <- fit
     out$numstudies <- fit$k
     
-  } else if (method == "BAYES") { 
-    bayesma <- run_Bayesian_REMA(list('r' = ds$theta,
-                                      'vars' = ds$theta.se**2,
-                                      'k' = numstudies), 
-                             pars = pars.default, 
-                             FUN_generate_bugs = .generateBugsREMA,
-                             n.chains = n.chains, 
-                             verbose = verbose, ...) 
-    out <- c(out, bayesma)
   }
   #attr(out$results,"level") <- pars.default$level
   out$data <- ds
@@ -282,7 +283,12 @@ plot.uvmeta <- function(x, sort="asc", ...) {
   
   #Extract data
   yi <- c(x$data[,"theta"])
-  yi.slab <- c(as.character(x$slab))
+
+  if (is.null(x$slab)) {
+    yi.slab <- rownames(x$data)
+  } else {
+    yi.slab <- c(as.character(x$slab))
+  }
   
   forest(theta = yi, 
          theta.ci.lb = yi.ci[,1], 
@@ -419,7 +425,111 @@ dplot.uvmeta <- function(x, par, distr_type, plot_type = "dens", ...) {
   dplot(x$fit$mcmc, P = P, plot_type = plot_type, ...)
 }
 
+#' Plot the autocorrelation of a Bayesian meta-analysis model
+#' 
+#' Function to display autocorrelation of a fitted Bayesian meta-analysis model.
+#' 
+#' @param x An object of class \code{"valmeta"}
+#' @param \ldots Additional arguments which are currently not used
+#' @return A \code{ggplot} object.
+#' 
+#' @details 
+#' Results are displayed for the estimated mean (\code{mu}) and standard-deviation (\code{tau}) of the meta-analysis model.
+#' 
+#' @examples 
+#' \dontrun{
+#' data(Roberts)
+#' 
+#' fit <- with(Roberts, uvmeta(r=SDM, r.se=SE, labels=rownames(Roberts), method="BAYES"))
+#' acplot(fit)
+#' } 
+#' 
+#' @keywords meta-analysis convergence autocorrelation
+#'             
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' 
+#' @return An object of class \code{ggplot}
+#' 
+#' @export
+acplot.uvmeta <- function(x, ...) {
+  if (!("runjags" %in% class(x$fit))) {
+    stop("The object 'x' does not represent a Bayesian analysis!")
+  }
+  if (!requireNamespace("ggmcmc", quietly = TRUE)) {
+    stop("The package 'ggmcmc' is currently not installed!")
+  } 
+  
+  P <- data.frame(
+    Parameter = c("mu.tobs", "bsTau"),
+    Label = c("mu", "tau"))
+  
+  acplot(x$fit$mcmc, P = P, greek = TRUE, ...)
+  
+}
 
 
+#' Plot the running means of a Bayesian meta-analysis model
+#' 
+#' Function to display running means of a fitted Bayesian meta-analysis model.
+#' 
+#' @param x An object of class \code{"valmeta"}
+#' @param \ldots Additional arguments which are currently not used
+#' @return A \code{ggplot} object.
+#' 
+#' @details 
+#' Results are displayed for the estimated mean (\code{mu}) and standard-deviation (\code{tau}) of the meta-analysis model.
+#' 
+#' @examples 
+#' \dontrun{
+#' data(Roberts)
+#' 
+#' fit <- with(Roberts, uvmeta(r=SDM, r.se=SE, labels=rownames(Roberts), method="BAYES"))
+#' rmplot(fit)
+#' } 
+#' 
+#' @keywords meta-analysis convergence
+#'             
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' 
+#' @return An object of class \code{ggplot}
+#' 
+#' @export
+rmplot.uvmeta <- function(x, ...) {
+  if (!("runjags" %in% class(x$fit))) {
+    stop("The object 'x' does not represent a Bayesian analysis!")
+  }
+  
+  P <- data.frame(
+    Parameter = c("mu.tobs", "bsTau"),
+    Label = c("mu", "tau"))
+  
+  rmplot(x$fit$mcmc, P = P, greek = TRUE, ...)
+}
 
-
+#' Gelman-Rubin-Brooks plot
+#' 
+#' This plot shows the evolution of Gelman and Rubin's shrink factor as the number of iterations increases. The code is adapted from
+#' the R package coda.
+#' 
+#' @param x An mcmc object
+#' @param confidence The coverage probability of the confidence interval for the potential scale reduction factor
+#' @param \ldots Additional arguments which are currently not used
+#' @return A \code{ggplot} object.
+#' 
+#'             
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' 
+#' @return An object of class \code{ggplot}
+#' 
+#' @export
+gelmanplot.uvmeta <- function(x, confidence = 0.95, ...) {
+  if (!("runjags" %in% class(x$fit))) {
+    stop("The object 'x' does not represent a Bayesian analysis!")
+  }
+  
+  P <- data.frame(
+    Parameter = c("mu.tobs", "bsTau"),
+    Label = c("mu", "tau"))
+  
+  return(gelmanplot(x$fit$mcmc, P = P, confidence = confidence, greek = TRUE, ...))
+}

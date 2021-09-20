@@ -365,6 +365,7 @@ print.fat <- function(x, digits = max(3, getOption("digits") - 3), ...) {
 #' # Plot the funnel for an alternative test
 #' plot(fat(b=b, b.se=b.se, n.total=n.total, method="M-FIV"), xlab = "Log hazard ratio")
 #' 
+#' 
 #' @import ggplot2
 #' @importFrom stats qt
 #' @importFrom graphics plot axis polygon points lines box abline

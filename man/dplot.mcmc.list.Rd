@@ -16,6 +16,9 @@ histogram (\code{"hist"}) should be displayed.}
 
 \item{\ldots}{Additional arguments which are currently not used}
 }
+\value{
+A \code{ggplot} object.
+}
 \description{
 Generate a plot of the posterior distribution
 }

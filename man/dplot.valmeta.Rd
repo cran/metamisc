@@ -21,6 +21,8 @@ histogram (\code{"hist"}) should be displayed.}
 \item{\ldots}{Additional arguments which are currently not used}
 }
 \value{
+A \code{ggplot} object.
+
 An object of class \code{ggplot}
 }
 \description{

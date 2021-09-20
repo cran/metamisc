@@ -2,21 +2,7 @@ logit <- function(x) {  log(x/(1-x))  }
 
 inv.logit <- function(x) {  1/(1+exp(-x)) }
 
-generateMCMCinits <- function(n.chains, model.pars)
-{
-  inits <- list()
-  for (i in 1:n.chains) {
-    inits.i <- list()
-    for (j in 1:length(model.pars)) {
-      parname <- model.pars[[j]]$param
-      fprior <- model.pars[[j]]$param.f
-      fargs <- model.pars[[j]]$param.args
-      inits.i[[parname]] = do.call(fprior, fargs)
-    }
-    inits[[i]] <- inits.i
-  }
-  return(inits)
-}
+
 
 #' Convert a correlation matrix into a covariance matrix
 #'
@@ -49,8 +35,8 @@ cor2cov <- function(sigma, cormat) {
 
 rstudentt <- function(n, mean, sigma, df, lower, upper) {
   #non-truncated student t
-  sample <- (rt(n, df=df)*sqrt((sigma**2) * (df-2)/df) + mean)
-  
+  sample <- (rt(n, df = df) * sqrt((sigma**2) * (df-2)/df) + mean)
+
   # Rejection sampling to ensure the boundaries are met
   count <- 0
   maxcount <- 100

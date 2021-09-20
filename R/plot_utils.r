@@ -106,19 +106,15 @@ forest.default <- function(theta,
   if (missing(theta.slab)) {
     if (!is.null(attr(theta, "slab"))) {
       slab <- attr(theta, "slab")
-    }
-    else {
+    } else {
       slab <- paste("Study", seq_len(k))
     }
-  }
-  else {
+  } else {
     if (length(theta.slab) == 1 && is.na(theta.slab)) 
       slab <- rep("", k)
     else
       slab <- theta.slab
   }
-  
-  
   
   add.predint <- TRUE # Add prediction interval by default
   if (missing(theta.summary.pi.lb) | missing(theta.summary.pi.ub)) {
@@ -129,14 +125,12 @@ forest.default <- function(theta,
   }
   
   # Determine ordering
+  i.index <- 1:length(yi)
   if (sort == "asc") {
     i.index <- order(yi, decreasing = FALSE)
   } else if (sort == "desc") {
     i.index <- order(yi, decreasing = TRUE)
-  } else {
-    i.index <- 1:length(yi)
   }
-  
   
   # Order the study results
   scat  <- rep(1, num.studies) #indicator variable for data points
@@ -178,7 +172,7 @@ forest.default <- function(theta,
   
   # Information for secondary axis
   labels_axis2 <- paste(format(ALL$mean, digits = study.digits, nsmall=2), " [", 
-                        format(ALL$m.lower, digits = study.digits, nsmall=2), " - ", 
+                        format(ALL$m.lower, digits = study.digits, nsmall=2), " ; ", 
                         format(ALL$m.upper, digits = study.digits, nsmall=2), "]", sep = "")
   
   
@@ -343,12 +337,120 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 #' 
 #' @author Thomas Debray <thomas.debray@gmail.com>
 #' @param \dots Additional arguments, which are currently ignored.
+#' @return A \code{ggplot} object.
 #' 
 #' @details This is a generic function. 
 #' 
 #' @export dplot
 dplot <- function(...)
   UseMethod("dplot")
+
+#' Gelman-Rubin-Brooks plot
+#' 
+#' This plot shows the evolution of Gelman and Rubin's shrink factor as the number of iterations increases. The code is adapted from
+#' the R package coda.
+#' 
+#' @param \ldots Additional arguments which are currently not used
+#' @return A \code{ggplot} object.
+#' 
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' 
+#' @return An object of class \code{ggplot}
+#' 
+#' @export gelmanplot
+gelmanplot <- function(...) 
+  UseMethod("gelmanplot")
+
+#' Plot the autocorrelation of a Bayesian meta-analysis model
+#' 
+#' Function to display autocorrelation of a fitted Bayesian meta-analysis model.
+#' 
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' @param \dots Additional arguments, which are currently ignored.
+#' @return A \code{ggplot} object.
+#'
+#' @details This is a generic function. 
+#' 
+#' @export acplot
+acplot <- function(...)
+  UseMethod("acplot")
+
+#' Plot the running means of a Bayesian meta-analysis model
+#' 
+#' Function to display running means of a fitted Bayesian meta-analysis model.
+#' 
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' @param \dots Additional arguments, which are currently ignored.
+#' @return A \code{ggplot} object.
+#'  
+#' @details This is a generic function. 
+#' 
+#' @export rmplot
+rmplot <- function(...)
+  UseMethod("rmplot")
+
+#' Plot the autocorrelation of a Bayesian meta-analysis model
+#' 
+#' Function to display autocorrelation of a fitted Bayesian meta-analysis model.
+#' 
+#' @param x An object of class \code{"mcmc.list"}
+#' @param P Optional dataframe describing the parameters to plot and their respective names
+#' @param greek Logical value indicating whether parameter labels have to be parsed to get Greek letters. Defaults to FALSE.
+#' @param nLags	Integer indicating the number of lags of the autocorrelation plot.
+#' @param \ldots Additional arguments which are passed to ggs_autocorrelation
+#' @return A \code{ggplot} object.
+#' 
+#' @keywords meta-analysis autocorrelation
+#'             
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' 
+#' @export
+#' @importFrom dplyr group_by do %>%
+acplot.mcmc.list <- function(x, P, nLags = 50, greek = FALSE, ...) {
+  requireNamespace("ggmcmc")
+  
+  if (!missing(P)) {
+    S <- ggmcmc::ggs(x, par_labels = P, sort = FALSE)
+    D <- subset(S, S$ParameterOriginal %in% P$Parameter)
+  } else {
+    D <- ggmcmc::ggs(x, sort = FALSE)
+  }
+  g <- ggmcmc::ggs_autocorrelation(D = D, nLags = nLags, greek = greek, ...)
+  g <- g + theme(strip.text.y = element_text(angle = 0))
+  
+  return(g)
+}
+
+
+#' Plot the running means of a Bayesian meta-analysis model
+#' 
+#' Function to display running means of a fitted Bayesian meta-analysis model.
+#' 
+#' @param x An object of class \code{"mcmc.list"}
+#' @param P Optional dataframe describing the parameters to plot and their respective names
+#' @param greek Logical value indicating whether parameter labels have to be parsed to get Greek letters. Defaults to FALSE.
+#' @param \ldots Additional arguments which are passed to ggs_running
+#' @return A \code{ggplot} object.
+#' 
+#'             
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' 
+#' @export
+rmplot.mcmc.list <- function(x, P, greek = FALSE, ...) {
+  requireNamespace("ggmcmc")
+  
+  if (!missing(P)) {
+    S <- ggmcmc::ggs(x, par_labels = P, sort = FALSE)
+    D <- subset(S, S$ParameterOriginal %in% P$Parameter)
+  } else {
+    D <- ggmcmc::ggs(x, sort = FALSE)
+  }
+  
+  g <- ggmcmc::ggs_running(D = D, greek = greek, ...)
+  g <- g + theme(strip.text.y = element_text(angle = 0))
+  
+  return(g)
+}
 
 
 #' Posterior distribution of estimated model parameters
@@ -360,6 +462,7 @@ dplot <- function(...)
 #' @param plot_type Optional character string to specify whether a density plot (\code{"dens"}) or 
 #' histogram (\code{"hist"}) should be displayed.
 #' @param \ldots Additional arguments which are currently not used
+#' @return A \code{ggplot} object.
 #' 
 #' 
 #' @keywords meta-analysis density distribution
@@ -384,4 +487,88 @@ dplot.mcmc.list <- function(x, P, plot_type = "dens", ...) {
   } else {
     stop("Invalid plot type")
   }
+}
+
+#' Gelman-Rubin-Brooks plot
+#' 
+#' This plot shows the evolution of Gelman and Rubin's shrink factor as the number of iterations increases. The code is adapted from
+#' the R package coda.
+#' 
+#' @param x An mcmc object
+#' @param P Optional dataframe describing the parameters to plot and their respective names
+#' @param confidence The coverage probability of the confidence interval for the potential scale reduction factor
+#' @param max.bins Maximum number of bins, excluding the last one.
+#' @param autoburnin Logical flag indicating whether only the second half of the series should be used in the computation. 
+#' If set to TRUE (default) and start(x) is less than end(x)/2 then start of series will be adjusted so that only second half of series is used.
+#' @param greek Logical value indicating whether parameter labels have to be parsed to get Greek letters. Defaults to false.
+#' @param \ldots Additional arguments which are currently not used
+#' @return A \code{ggplot} object.
+#' 
+#'             
+#' @author Thomas Debray <thomas.debray@gmail.com>
+#' 
+#' @return An object of class \code{ggplot}
+#' 
+#' @export
+gelmanplot.mcmc.list <- function(x, P, confidence = 0.95, max.bins = 50, autoburnin = TRUE, greek = FALSE, ...) {
+  requireNamespace("coda")
+
+  nbin <- min(floor((coda::niter(x) - 50)/coda::thin(x)), max.bins)
+  if (nbin < 1) {
+    stop("Insufficient iterations to produce Gelman-Rubin plot")
+  }
+  binw <- floor((coda::niter(x) - 50)/nbin)
+  last.iter <- c(seq(from = start(x) + 50 * coda::thin(x), by = binw * 
+                       coda::thin(x), length = nbin), end(x))
+  shrink <- array(dim = c(nbin + 1, coda::nvar(x), 2))
+  dimnames(shrink) <- list(last.iter, coda::varnames(x), 
+                           c("median", paste(50 * (confidence + 1), "%", sep = "")))
+  for (i in 1:(nbin + 1)) {
+    shrink[i, , ] <- coda::gelman.diag(window(x, end = last.iter[i]), 
+                                 confidence = confidence, 
+                                 transform = FALSE, 
+                                 autoburnin = autoburnin, 
+                                 multivariate = FALSE)$psrf
+  }
+  all.na <- apply(is.na(shrink[, , 1, drop = FALSE]), 2, all)
+  if (any(all.na)) {
+    cat("\n******* Error: *******\n")
+    cat("Cannot compute Gelman & Rubin's diagnostic for any chain \n")
+    cat("segments for variables", coda::varnames(x)[all.na], "\n")
+    cat("This indicates convergence failure\n")
+  }
+  
+  labels_gelmandiag <- names(shrink[1,1,])
+  ggdatMed <- data.frame(cbind(shrinkfactor = as.vector(shrink[,,labels_gelmandiag[1]]), 
+                               parameter = rep(colnames(shrink[,,1]), each = nrow(shrink[,,1])),
+                               type = labels_gelmandiag[1], 
+                               last.iter = rep(last.iter, ncol(shrink[,,1]))))
+  ggdatBnd <- data.frame(cbind(shrinkfactor = as.vector(shrink[,,labels_gelmandiag[2]]), 
+                               parameter = rep(colnames(shrink[,,2]), each = nrow(shrink[,,2])),
+                               type = labels_gelmandiag[2], 
+                               last.iter = rep(last.iter, ncol(shrink[,,2]))))
+  ggdat <- rbind(ggdatMed, ggdatBnd)
+  ggdat$last.iter <- as.numeric(as.character(ggdat$last.iter))
+  ggdat$shrinkfactor <- as.numeric(as.character(ggdat$shrinkfactor))
+  
+  if (!missing(P)) {
+    ggdat <- subset(ggdat, ggdat$parameter %in% P$Parameter)
+    ggdat$parameter <- factor(ggdat$parameter, levels = P$Parameter, labels = P$Label)
+  }
+  
+  
+  if (greek) {
+    g <- with(ggdat, ggplot(ggdat, aes(last.iter, shrinkfactor, color = type)) +
+                geom_line() + facet_wrap(~ parameter, labeller = label_parsed) + 
+                xlab("Last iteration in chain") +
+                ylab("Shrink factor"))
+  } else {
+    g <- with(ggdat, ggplot(ggdat, aes(last.iter, shrinkfactor, color = type)) +
+                geom_line() + facet_wrap(~ parameter) + 
+                xlab("Last iteration in chain") +
+                ylab("Shrink factor"))
+  }
+  
+  
+  return(g)
 }

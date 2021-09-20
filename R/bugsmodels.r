@@ -30,24 +30,36 @@
     out <- paste(out, "  mu.obs <- 1/(1+exp(-mu.tobs))\n", sep = "")
     out <- paste(out, "  pred.obs <- 1/(1+exp(-pred.tobs))\n", sep = "")
     out <- paste(out, "  pred.tobs ~ dnorm(mu.tobs, bsprec)\n", sep = "")
+    
+    model.pars <- c(mu = "mu.tobs", # Meta-analysis mean
+                    mu_t = "mu.obs", # Transformed meta-analysis mean
+                    tau2 = "bsTauSq", 
+                    tau = "bsTau", 
+                    prior_tau = "prior_bsTau", 
+                    prior_mu = "prior_mu", 
+                    theta_new = "pred.tobs", # New draw from the meta-analysis distribution
+                    theta_new_t = "pred.obs" # New draw on the transformed scale
+                    )
+  } else if (pars$model.cstat == "normal/identity") {
+    out <- paste(out, "  mu.tobs ~ dnorm(", pars$hp.mu.mean, ",", hp.mu.prec, ")\n", sep = "")
+    out <- paste(out, "  prior_mu ~ dnorm(", pars$hp.mu.mean, ",", hp.mu.prec, ")\n", sep = "")
+    out <- paste(out, "  pred.tobs ~ dnorm(mu.tobs, bsprec)\n", sep = "")
+    
+    model.pars <- c(mu = "mu.tobs", # Meta-analysis mean
+                   mu_t = "mu.tobs", # Transformed meta-analysis mean
+                   tau2 = "bsTauSq", 
+                   tau = "bsTau", 
+                   prior_tau = "prior_bsTau", 
+                   prior_mu = "prior_mu", 
+                   theta_new = "pred.tobs", # New draw from the meta-analysis distribution
+                   theta_new_t = "pred.tobs" # New draw on the transformed scale
+                  )
   } else {
     stop("Specified link function not implemented")
   }
   out <- paste(out, "}", sep = "")
   
-  ret.out <- list(model.text = out, 
-                  model.pars = c(mu = "mu.tobs", # Meta-analysis mean
-                                 mu_t = "mu.obs", # Transformed meta-analysis mean
-                                 tau2 = "bsTauSq", 
-                                 tau = "bsTau", 
-                                 prior_tau = "prior_bsTau", 
-                                 prior_mu = "prior_mu", 
-                                 theta_new = "pred.tobs", # New draw from the meta-analysis distribution
-                                 theta_new_t = "pred.obs" # New draw on the transformed scale
-                  )
-  )
-  
-  return(ret.out)
+  return(list(model.text = out, model.pars = model.pars))
 }
 
 
@@ -178,10 +190,10 @@ generateBugsOE <- function(extrapolate=F,
   hp.mu.prec <- 1/pars$hp.mu.var
   
   out <- "model {\n " 
-  out <- paste(out, "for (i in 1:k) {\n")
-  out <- paste(out, "    w[i] <- 1/vars[i]\n")
-  out <- paste(out, "    r[i] ~ dnorm(theta[i],w[i])\n")
-  out <- paste(out, "    theta[i] ~ dnorm(mu.tobs,prec)\n")
+  out <- paste(out, "for (i in 1:Nstudies) {\n")
+  out <- paste(out, "    wsprec[i] <- 1/theta.var[i]\n")
+  out <- paste(out, "    theta[i] ~ dnorm(alpha[i], wsprec[i])\n")
+  out <- paste(out, "    alpha[i] ~ dnorm(mu.tobs,prec)\n")
   out <- paste(out, " }\n\n")
   out <- paste(out, " #prior distributions\n")
   out <- paste(out, " tausq <- bsTau*bsTau\n")

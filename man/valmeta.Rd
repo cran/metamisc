@@ -162,7 +162,7 @@ entire range of predicted risks). When missing, the total O:E ratio and/or its s
 reported information. See \code{\link{oecalc}} for more information.
 
 For frequentist meta-analysis, within-study variation can either be modeled using a Normal (\code{model.oe = "normal/log"} 
-or \code{model.oe = "normal/identity"}) or a Poisson distribution (\code{model.oe = "normal/log"}). 
+or \code{model.oe = "normal/identity"}) or a Poisson distribution (\code{model.oe = "poisson/log"}). 
 
 When performing a Bayesian meta-analysis, all data are modeled using a one-stage random effects (hierarchical related regression) model.
 In particular, a binomial distribution (if \code{O}, \code{E} and \code{N} is known), a Poisson distribution 
@@ -171,16 +171,16 @@ In particular, a binomial distribution (if \code{O}, \code{E} and \code{N} is kn
 }
 
 \subsection{Bayesian meta-analysis}{
-All Bayesian meta-analysis models assume random effects by default. Results are based on the posterior median. 
+All Bayesian meta-analysis models assume the presence of random effects. Summary estimates are based on the posterior mean. 
 Credibility and prediction intervals are directly obtained from the corresponding posterior quantiles.
 
-The prior distribution for the (transformed) summary estimate is always modeled using a Normal distribution, 
-with mean \code{hp.mu.mean} (defaults to 0) and variance 
-\code{hp.mu.var} (defaults to 1000). For meta-analysis of the total O:E ratio, the maximum value for \code{hp.mu.var} is 100.
+The prior distribution for the (transformed) performance estimate is modeled using a Normal distribution, 
+with mean \code{hp.mu.mean} (defaults to 0) and variance \code{hp.mu.var} (defaults to 1000). 
+For meta-analysis of the total O:E ratio, the maximum value for \code{hp.mu.var} is 100.
 
 By default, the prior distribution for the between-study standard deviation is modeled using a uniform distribution 
-(\code{hp.tau.dist="dunif"}), with boundaries \code{hp.tau.min} and \code{hp.tau.max}. Alternatively, it is possible
-to specify a truncated Student-t distribution (\code{hp.tau.dist="dhalft"}) with a mean of \code{hp.tau.mean}, 
+(\code{hp.tau.dist="dunif"}), with boundaries \code{hp.tau.min} and \code{hp.tau.max}. Alternative choices are a 
+truncated Student-t distribution (\code{hp.tau.dist="dhalft"}) with a mean of \code{hp.tau.mean}, 
 a standard deviation of \code{hp.tau.sigma} and \code{hp.tau.df} degrees of freedom. This distribution is again 
 restricted to the range \code{hp.tau.min} to \code{hp.tau.max}.
 }
@@ -203,7 +203,7 @@ plot(fit)
 valmeta(cstat=c.index,  N=n, O=n.events, slab=Study, data=EuroSCORE)
 
 # Two-stage meta-analysis of the total O:E ratio (random effects)
-valmeta(measure="OE", O=n.events, E=e.events, N=n, data=EuroSCORE)    
+valmeta(measure="OE", O=n.events, E=e.events, N=n, slab=Study, data=EuroSCORE)    
 valmeta(measure="OE", O=n.events, E=e.events, data=EuroSCORE)       
 valmeta(measure="OE", Po=Po, Pe=Pe, N=n, data=EuroSCORE)
 
