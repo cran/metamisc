@@ -1,6 +1,7 @@
 #' Calculate the concordance statistic
 #'
-#' The function calculates (transformed versions of) the concordance (c-) statistic with the corresponding sampling variance. 
+#' The function calculates (transformed versions of) the concordance (c-)
+#' statistic with the corresponding sampling variance. 
 #' 
 #' @param cstat vector to specify the estimated c-statistics.
 #' @param cstat.se Optional vector to specify the corresponding standard errors.
@@ -189,7 +190,7 @@ ccalc <- function(cstat, cstat.se, cstat.cilb, cstat.ciub, cstat.cilv, sd.LP, N,
     if (anyNA(slab))
       stop("NAs in study labels.")
     
-    if (class(slab)=="factor") {
+    if (inherits(slab, "factor")) {
       slab <- as.character(slab)
     }
     

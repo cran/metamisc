@@ -59,33 +59,32 @@ axb <- f2tl(faxb)
 ab <- f2tl(fab)
 abb2 <- f2tl(fabb2)
 
-# For tests A, B and C below, the order of the returned vector is different when
-# run in the console or through devtools::test() The order has been changed to match
-# the order for devtools
+# For tests A, B and C below, the order of the returned vector used to be
+# different when run in the console or through devtools::test() The order in the
+# tests has been changed to match the order of the ouput.
 # Differences in vectors of characters
 test_that("The difference in vectors is given", {
-  expect_equal(metamisc:::setSymDiff(ab, axb), "a:b")
-  expect_equal(metamisc:::setSymDiff(abb2, ab), "I(b^2)")
-  expect_equal(metamisc:::setSymDiff(abb2, axb), c("I(b^2)", "a:b")) # A
-  expect_length(metamisc:::setSymDiff(ab, ab), 0L)
+  expect_equal(setSymDiff(ab, axb), "a:b")
+  expect_equal(setSymDiff(abb2, ab), "I(b^2)")
+  expect_equal(setSymDiff(abb2, axb), c("a:b", "I(b^2)")) # A
+  expect_length(setSymDiff(ab, ab), 0L)
 })
 
 # Differences in formulas, as character vectors.
 test_that("The difference in formulas is given", {
-  expect_equal(metamisc:::getFormulaDiffAsChar(f0, fabb2), c("I(b^2)", "a", "b")) # B
-  expect_equal(metamisc:::getFormulaDiffAsChar(fabb2, fabb2), character()) # or length() == 0
-  expect_equal(metamisc:::getFormulaDiffAsChar(faxb, fabb2), c("I(b^2)", "a:b")) # C
+  expect_equal(getFormulaDiffAsChar(f0, fabb2), c("a", "b", "I(b^2)")) # B
+  expect_equal(getFormulaDiffAsChar(fabb2, fabb2), character()) # or length() == 0
+  expect_equal(getFormulaDiffAsChar(faxb, fabb2), c("a:b", "I(b^2)")) # C
 })
 
-test_that("The order of sort is different in devtools", {
+test_that("The order of sort is now the same in devtools", {
   # The order we get in the console is:
-  # c("a", "b", "I(b^2)")
-  # Yet it's a failure when run through devtools:
-  expect_false(identical(c("a", "b", "I(b^2)"), sort(c("a", "b", "I(b^2)"))))
+  c("a", "b", "I(b^2)")
+  # It no longer is a failure when run through devtools:
+  expect_true(identical(c("a", "b", "I(b^2)"), sort(c("a", "b", "I(b^2)"))))
   # The order we get through devtools is:
-  expect_equal(sort(c("I(b^2)", "a", "b")), c("I(b^2)", "a", "b"))
+  expect_equal(sort(c("I(b^2)", "a", "b")), c("a", "b", "I(b^2)")) # c("I(b^2)", "a", "b")) = old order
 })
-
 
 
 

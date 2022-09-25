@@ -17,15 +17,19 @@ computeRecal <- function(object, newdata, b = NULL, f = ~ 1, estFUN = NULL, f.or
   }
   estFUN <- match.fun(estFUN)
   
+  # Convert outcome to binary, if it is a factor
+  model_formula <- if (is.null(f.orig)) formula(object) else as.formula(f.orig)
+  if (is.factor(newdata[, f2o(model_formula)]))
+    newdata[ , f2o(model_formula)] <- factor_as_binary(newdata[ , f2o(model_formula)])
+  
   # Make offset (linear predictor)
-  X <- model.matrix(if (is.null(f.orig)) formula(object) else as.formula(f.orig), data = newdata)
+  X <- model.matrix(model_formula, data = newdata)
   lp <- X %*% b
   
   # offset must be in newdata.
   osdata   <- cbind(newdata, lp)
   f <- update.formula(formula(object), formula(f))
-  if (is.null(object$family))
-  { 
+  if (is.null(object$family)) { 
     if (!is.null(dots[["family"]])) {
       refit <- estFUN(f, data = osdata, offset = lp, family = dots[["family"]])
     } else 

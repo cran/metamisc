@@ -1,16 +1,24 @@
-generateMCMCinits <- function(n.chains, model.pars)
+generateMCMCinits <- function(n.chains, model.pars, seed)
 {
   inits <- list()
-  for (i in 1:n.chains) {
+  for (i in seq_len(n.chains)) {
     inits.i <- list()
-    for (j in 1:length(model.pars)) {
+    for (j in seq_along(model.pars)) {
       parname <- model.pars[[j]]$param
       fprior <- model.pars[[j]]$param.f
       fargs <- model.pars[[j]]$param.args
-      inits.i[[parname]] = do.call(fprior, fargs)
+      inits.i[[parname]] <- do.call(fprior, fargs)
     }
+    
+    # Do we need to add seed info?
+    if (!is.null(seed)) {
+      inits.i[[".RNG.name"]] <- "base::Wichmann-Hill"
+      inits.i[[".RNG.seed"]] <- (seed + i) # Make sure each chain has a unique seed
+    }
+    
     inits[[i]] <- inits.i
   }
+  
   return(inits)
 }
 
@@ -24,7 +32,8 @@ generateMCMCinits <- function(n.chains, model.pars)
                        hp.tau.sigma = 0.5,
                        hp.tau.dist = "dunif", 
                        hp.tau.df = 3, 
-                       correction = 0.5)
+                       correction = 0.5,
+                       seed = NULL)
   
   if (type == "valmeta") {
     pars.default$hp.tau.max = 2
@@ -34,14 +43,20 @@ generateMCMCinits <- function(n.chains, model.pars)
   }
   
   if (!missing(pars)) {
-    for (i in 1:length(pars)) {
+    for (i in seq_along(pars)) {
       element <- ls(pars)[i]
       pars.default[[element]] <- pars[[element]]
     }
   }
   
+  # Set random seed
+  if (!is.null(pars.default$seed)) {
+    message("Setting random seed to ", pars.default$seed)
+    set.seed(pars.default$seed)
+  }
+  
   if (pars.default$level < 0 | pars.default$level > 1) {
-    stop ("Invalid value for 'level'!")
+    stop("Invalid value for 'level'!")
   } 
   
   return(pars.default)
@@ -62,7 +77,9 @@ run_Bayesian_REMA <- function(call, measure, method, data, pars, n.chains, verbo
   model.pars <- generateHyperparametersMA(pars)
   
   # Generate initial values from the relevant distributions
-  inits <- generateMCMCinits(n.chains = n.chains, model.pars = model.pars)
+  inits <- generateMCMCinits(n.chains = n.chains, 
+                             model.pars = model.pars,
+                             seed = pars$seed)
   
   # Generate data fame
   bugs_data <-  list(theta = data$theta,
@@ -168,7 +185,8 @@ run_Bayesian_MA_oe <- function(call, measure, method, data, pars, n.chains, verb
   
   
   inits <- generateMCMCinits(n.chains = n.chains, 
-                             model.pars = model.pars)
+                             model.pars = model.pars,
+                             seed = pars$seed)
   
   jags.model <- runjags::run.jags(model = model, 
                                   monitor = c("mu.tobs", "mu.oe", "pred.oe", "bsTau", "prior_bsTau", "prior_mu", "PED"), 

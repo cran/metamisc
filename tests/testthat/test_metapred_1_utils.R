@@ -160,3 +160,21 @@ test_that("The predict functions predict accurately.", {
   expect_true(all.equal(unlist(pm(m.qp, td, coef(m.qp))) ,as.matrix(unlist(m.qp$fitted.values)),
                         use.names = F, check.attributes = F)) # also intentionally ignores names.
 })
+
+set.seed(1234)
+y <- c(rep(0, 20), rep(1, 20))
+x <- rnorm(length(y), y, 1)
+z <- factor(rbinom(length(y), 1, c(0.3, 0.6)[y]))
+y <- factor(y)
+y[1:3] <- NA
+
+# The idea is that it does the same as how glm handles factors internally,
+# so the behaviour of metapred is the same as that of glm.
+test_that("factor_as_binary does not affect glm", { 
+  glm_factor_default <- coef(glm(y ~ x + z, family = binomial))
+  expect_true(is.numeric(y <- factor_as_binary(y)))
+  glm_factor_as_binary <- coef(glm(y ~ x + z, family = binomial))
+  expect_identical(glm_factor_default, glm_factor_as_binary)
+})
+
+

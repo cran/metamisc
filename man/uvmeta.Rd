@@ -117,23 +117,28 @@ plot(fit2)
 
 }
 \references{
-\itemize{
-\item Biggerstaff BJ, Tweedie RL. Incorporating variability in estimates of heterogeneity in the random effects model 
-in meta-analysis. \emph{Statistics in Medicine} 1997; \bold{16}:  753--768.
-\item Borenstein M, Hedges LV, Higgins JPT, Rothstein HR. A basic introduction to fixed-effect and random-effects 
-models for meta-analysis. \emph{Research Synthesis Methods} 2010; \bold{1}: 97--111.
-\item DerSimonian R, Laird N. Meta-analysis in clinical trials. \emph{Controlled Clinical Trials} 1986; \bold{7}: 177--188.
-\item Graham PL, Moran JL. Robust meta-analytic conclusions mandate the provision of prediction intervals in 
+Biggerstaff BJ, Tweedie RL. Incorporating variability in estimates of heterogeneity in the random effects model 
+in meta-analysis. \emph{Statistics in Medicine} 1997; \bold{16}: 753--768.
+
+Borenstein M, Hedges LV, Higgins JPT, Rothstein HR. A basic introduction to fixed-effect and random-effects 
+models for meta-analysis. \emph{Research Synthesis Methods} 2010; \bold{1}: 97--111. \doi{10.1002/jrsm.12}
+
+DerSimonian R, Laird N. Meta-analysis in clinical trials. \emph{Controlled Clinical Trials} 1986; \bold{7}: 177--188.
+
+Graham PL, Moran JL. Robust meta-analytic conclusions mandate the provision of prediction intervals in 
 meta-analysis summaries. \emph{Journal of Clinical Epidemiology} 2012; \bold{65}: 503--510.
-\item Higgins JPT, Thompson SG. Quantifying heterogeneity in a meta-analysis. \emph{Statistics in Medicine} 2002; 
+
+Higgins JPT, Thompson SG. Quantifying heterogeneity in a meta-analysis. \emph{Statistics in Medicine} 2002; 
 \bold{21}: 1539--1558.
-\item Higgins JPT, Thompson SG, Spiegelhalter DJ. A re-evaluation of random-effects meta-analysis. 
-\emph{Journal of the Royal Statistical Society. Series A (Statistics in Society)} 2009, \bold{172}: 137--159.
-\item Riley RD, Higgins JPT, Deeks JJ. Interpretation of random effects meta-analyses. 
-\emph{British Medical Journal} 2011; \bold{342}: d549.
-\item Viechtbauer W. Conducting Meta-Analyses in R with the metafor Package. \emph{Journal of Statistical Software}. 
-2010; 36(3). Available from: \url{https://www.jstatsoft.org/v36/i03/}
-}
+
+Higgins JPT, Thompson SG, Spiegelhalter DJ. A re-evaluation of random-effects meta-analysis. \emph{J R Stat Soc Ser A Stat Soc}. 
+2009;\bold{172}:137--59. \doi{10.1111/j.1467-985X.2008.00552.x}
+
+Riley RD, Higgins JPT, Deeks JJ. Interpretation of random effects meta-analyses. 
+\emph{British Medical Journal} 2011; \bold{342}: d549. \doi{10.1136/bmj.d549}
+
+Viechtbauer W. Conducting Meta-Analyses in R with the metafor Package. \emph{Journal of Statistical Software}. 
+2010; \bold{36}. \doi{10.18637/jss.v036.i03}
 }
 \author{
 Thomas Debray <thomas.debray@gmail.com>

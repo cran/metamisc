@@ -19,9 +19,17 @@ test_that("Class of forest plot", {
   expect_is(fig2, "ggplot")
   
   # Direct call to forest()
-  oe.ad <- oecalc(N=n, O=n.events, E=e.events, slab=Study, data=EuroSCORE)
-  fig2 <- forest(theta=oe.ad$theta, theta.ci.lb=oe.ad$theta.cilb, theta.ci.ub=oe.ad$theta.ciub, 
-                theta.slab=rownames(oe.ad), xlab="O:E ratio", refline=1)
+  oe.ad <- oecalc(N = n, 
+                  O = n.events, 
+                  E = e.events, 
+                  slab = Study, 
+                  data = EuroSCORE)
+  fig2 <- forest(theta = oe.ad$theta, 
+                 theta.ci.lb = oe.ad$theta.cilb, 
+                 theta.ci.ub = oe.ad$theta.ciub, 
+                 theta.slab = rownames(oe.ad), 
+                 xlab = "O:E ratio", 
+                 refline = 1)
   
   expect_is(fig2, "ggplot")
   
@@ -29,11 +37,10 @@ test_that("Class of forest plot", {
 
 test_that("Class of forest plot", {
   
-  fit <- valmeta(measure = "OE", N=n, O=n.events, E =  e.events,
-                 slab=Study, data=EuroSCORE,
+  fit <- valmeta(measure = "OE", N = n, O = n.events, E =  e.events,
+                 slab = Study, data = EuroSCORE,
                  method     = "ML",
                  pars       = list(model.oe = "poisson/log"))
-  metamisc::forest(fit)
   plot(fit)
   
   

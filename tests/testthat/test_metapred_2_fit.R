@@ -19,21 +19,41 @@ folds <- metamisc:::l1o(st.u)
 test_that("Stratified models can be estimated and MA.", {
   # Stratified estimation
   expect_is(stratum.fit <- mp.stratum.fit(gl), "mp.stratum.fit")
+  
   expect_is(stratified.fit <- mp.stratified.fit(formula = f, data = td, 
                                                 st.i = st.i, st.u = st.u, estFUN = glm, 
                                                 family = binomial)  , "mp.stratified.fit")
   
   # MA 
   # Note: this essentially yields the global model
-  expect_is(meta.fit <- mp.meta.fit(stratified.fit, urma), "mp.meta.fit")
+  expect_is(meta.fit <- metamisc:::mp.meta.fit(stratified.fit, metamisc:::urma), "mp.meta.fit")
   expect_length(coef(meta.fit), 3)
   # FE because rma automatically switches to FE for this sample anyways
-  expect_is(cv.meta.fit <- mp.cv.meta.fit(stratified.fit = stratified.fit, folds = folds, metaFUN = urma,
-                                          meta.method = "FE"), "mp.cv.meta.fit") 
+  expect_is(cv.meta.fit <- metamisc:::mp.cv.meta.fit(stratified.fit = stratified.fit, folds = folds, metaFUN = metamisc:::urma,
+                                                     meta.method = "FE"), "mp.cv.meta.fit") 
   expect_equal(dim(coef(cv.meta.fit)), c(length(unique(td[["X4"]])), ncol(td) - 1) )
   
   # Recal of MA
-  expect_is(recal.meta.fit <- mp.recal.meta.fit(meta.fit = meta.fit, formula = f, newdata = td, estFUN = glm), "mp.meta.fit")
+  expect_is(recal.meta.fit <- metamisc:::mp.recal.meta.fit(meta.fit = meta.fit, formula = f, newdata = td, estFUN = glm), "mp.meta.fit")
+  expect_gt(coef(recal.meta.fit)[1], coef(meta.fit)[1])
+  expect_identical(coef(recal.meta.fit)[-1], coef(meta.fit)[-1])
+})
+
+td_factor <- td
+td_factor$X1 <- as.factor(td_factor$X1)
+test_that("Stratified models for predicting factors can be estimated", {
+  expect_is(stratified.fit <- metamisc:::mp.stratified.fit(formula = f, data = td_factor,
+                                                           st.i = st.i, st.u = st.u, estFUN = glm,
+                                                           family = binomial)  , "mp.stratified.fit")
+  expect_is(meta.fit <- metamisc:::mp.meta.fit(stratified.fit, metamisc:::urma), "mp.meta.fit")
+  expect_length(coef(meta.fit), 3)
+  # FE because rma automatically switches to FE for this sample anyways
+  expect_is(cv.meta.fit <- metamisc:::mp.cv.meta.fit(stratified.fit = stratified.fit, folds = folds, metaFUN = metamisc:::urma,
+                                                     meta.method = "FE"), "mp.cv.meta.fit")
+  expect_equal(dim(coef(cv.meta.fit)), c(length(unique(td_factor[["X4"]])), ncol(td_factor) - 1) )
+  
+  # Recal of MA
+  expect_is(recal.meta.fit <- metamisc:::mp.recal.meta.fit(meta.fit = meta.fit, formula = f, newdata = td_factor, estFUN = glm), "mp.meta.fit")
   expect_gt(coef(recal.meta.fit)[1], coef(meta.fit)[1])
   expect_identical(coef(recal.meta.fit)[-1], coef(meta.fit)[-1])
 })
@@ -96,3 +116,26 @@ test_that("A stepwise stratified model can be fitted", {
                           st.u = st.u, folds = folds, family = binomial, max.steps = 3, meta.method = "FE"), "mp.fit")
   expect_equal(fit$best.step, "s1") # for this data and seed
 })
+
+
+set.seed(1234)
+y <- c(rep(0, 20), rep(1, 20))
+x <- rnorm(length(y), y, 1)
+z <- factor(rbinom(length(y), 1, c(0.3, 0.6)[y]))
+y <- factor(y)
+y[1:3] <- NA
+k <- rep(1:2, 10)
+d <- data.frame(y, x, z, k)
+
+# The idea is that it does the same as how glm handles factors internally.
+# so the behaviour of metapred should not change in this case as y is converted 
+# to factor
+test_that("factor_as_binary / metapred can handle factors", { 
+  metapred_numeric_y <- metapred(d, "k", y ~ x + z, family = binomial)
+  y <- factor(y)
+  metapred_factor_y <- metapred(d, "k", y ~ x + z, family = binomial)
+  expect_identical(coef(metapred_numeric_y), coef(metapred_factor_y))
+})
+
+
+

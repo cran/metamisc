@@ -225,7 +225,7 @@ metapred <- function(data, strata, formula, estFUN = "glm", scope = NULL, retest
   data <- droplevels(remove.na.obs(as.data.frame(data)))  # drop observations with missings in remaining vars
   
   if (is.factor(data[, f2o(formula)]))
-    data[ , f2o(formula)] <- as.numeric(data[ , f2o(formula)])
+    data[ , f2o(formula)] <- factor_as_binary(data[ , f2o(formula)])
   
   # One- vs two-stage, stratification and centering
   if(is.null(two.stage <- list(...)$two.stage) ) two.stage <- TRUE
